@@ -1,0 +1,17 @@
+name: pytorch-instrument-classifier-api
+channels:
+  - anaconda
+  - conda-forge
+  - pytorch  
+  - defaults
+dependencies:
+  - python
+  - numpy
+  - pytorch
+  - torchvision
+  - librosa
+  - scipy
+  - flask
+  - matplotlib
+  - ipykernel
+  - tensorboard
