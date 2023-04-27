@@ -139,28 +139,28 @@ def train_model(model, X_train, X_val, y_train, y_val, epochs, path):
 
 
 # Load X_train, X_val and y_train, y_val
-X_train_mel = np.load("data/X_train_mel.npy")
+X_train_mel = np.load("../../data/processed/X_train_mel.npy")
 X_train_mel = np.reshape(X_train_mel, (X_train_mel.shape[0], X_train_mel.shape[1], X_train_mel.shape[2], 1))
 
-X_train_modgd = np.load("data/X_train_modgd.npy")
+X_train_modgd = np.load("../../data/processed/X_train_modgd.npy")
 X_train_modgd = np.reshape(X_train_modgd, (X_train_modgd.shape[0], X_train_modgd.shape[1], X_train_modgd.shape[2], 1))
 
-X_train_pitch = np.load("data/X_train_pitch.npy")
+X_train_pitch = np.load("../../data/processed/X_train_pitch.npy")
 X_train_pitch = np.reshape(X_train_pitch, (X_train_pitch.shape[0], X_train_pitch.shape[1], X_train_pitch.shape[2], 1))
 
 y_train = np.load("data/y_train.npy")
 print("X_train, y_train loaded!")
 
-X_val_mel = np.load("data/X_val_mel.npy")
+X_val_mel = np.load("../../data/processed/X_val_mel.npy")
 X_val_mel = np.reshape(X_val_mel, (X_val_mel.shape[0], X_val_mel.shape[1], X_val_mel.shape[2], 1))
 
-X_val_modgd = np.load("data/X_val_modgd.npy")
+X_val_modgd = np.load("../../data/processed/X_val_modgd.npy")
 X_val_modgd = np.reshape(X_val_modgd, (X_val_modgd.shape[0], X_val_modgd.shape[1], X_val_modgd.shape[2], 1))
 
-X_val_pitch = np.load("data/X_val_pitch.npy")
+X_val_pitch = np.load("../../data/processed/X_val_pitch.npy")
 X_val_pitch = np.reshape(X_val_pitch, (X_val_pitch.shape[0], X_val_pitch.shape[1], X_val_pitch.shape[2], 1))
 
-y_val = np.load("data/y_val.npy")
+y_val = np.load("../../data/processed/y_val.npy")
 print("X_val, y_val loaded!")
 
 print("Mel model training!")

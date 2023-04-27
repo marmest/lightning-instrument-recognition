@@ -150,8 +150,8 @@ def main_testing():
                 features.append(feat)
     return features
 
-train_folder = 'data/IRMAS_Training_Data/'
-test_folder = "data/IRMAS_Validation_Data/"
+train_folder = '../../data/raw/IRMAS_Training_Data/'
+test_folder = "../../data/raw/IRMAS_Validation_Data/"
 
 label_map = {"cel": 0, "cla": 1, "flu": 2, "gac": 3, "gel": 4, "org": 5,
              "pia": 6, "sax": 7, "tru": 8, "vio": 9, "voi": 10}
@@ -201,14 +201,14 @@ print("Finished splitting!")
 # Save Numpy arrays and dictionaries
 print("Saving training data!")
 
-np.save("data/X_train_mel.npy", X_train_mel)
-np.save("data/X_val_mel.npy", X_val_mel)
-np.save("data/X_train_modgd.npy", X_train_modgd)
-np.save("data/X_val_modgd.npy", X_val_modgd)
-np.save("data/X_train_pitch.npy", X_train_pitch)
-np.save("data/X_val_pitch.npy", X_val_pitch)
-np.save("data/y_train.npy", y_train)
-np.save("data/y_val.npy", y_val)
+np.save("../../data/processed/X_train_mel.npy", X_train_mel)
+np.save("../../data/processed/X_val_mel.npy", X_val_mel)
+np.save("../../data/processed/X_train_modgd.npy", X_train_modgd)
+np.save("../../data/processed/X_val_modgd.npy", X_val_modgd)
+np.save("../../data/processed/X_train_pitch.npy", X_train_pitch)
+np.save("../../data/processed/X_val_pitch.npy", X_val_pitch)
+np.save("../../data/processed/y_train.npy", y_train)
+np.save("../../data/processed/y_val.npy", y_val)
 
 print("Saved training data!")
 
@@ -262,19 +262,19 @@ print("Finished test data!")
 
 print("Saving test data!")
 
-f = open("data/X_test_mel.pkl", "wb")
+f = open("../../data/processed/X_test_mel.pkl", "wb")
 pickle.dump(X_test_mel, f)
 f.close()
 
-f = open("data/X_test_modgd.pkl", "wb")
+f = open("../../data/processed/X_test_modgd.pkl", "wb")
 pickle.dump(X_test_modgd, f)
 f.close()
 
-f = open("data/X_test_pitch.pkl", "wb")
+f = open("../../data/processed/X_test_pitch.pkl", "wb")
 pickle.dump(X_test_pitch, f)
 f.close()
 
-f = open("data/y_test.pkl", "wb")
+f = open("../../data/processed/y_test.pkl", "wb")
 pickle.dump(y_test, f)
 f.close()
 
