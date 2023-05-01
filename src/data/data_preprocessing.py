@@ -18,7 +18,6 @@ def create_melspectrogram(x, sr, n_fft, hop_length):
 
 def create_modgdgram(signal, sr, n_frequency_bins=128, frame_length=0.05, hop_length=0.01, alpha=0.9, gamma=0.5, nc=10):
     
-   
     #convert to samples
     frame_length = int(frame_length * sr)
     hop_length = int(hop_length * sr)
@@ -66,7 +65,7 @@ def create_pitchgram(x, sr, hop_length):
     
     return pitchgram
 
-def extract_from_file(filename, seconds = 1, instrument = "pol"):
+def extract_from_file(filename, seconds = 1, instrument = "pol", api = False):
 
     # Read the data
     y, sr = librosa.load(filename, sr = 22050, mono = True)
@@ -77,7 +76,7 @@ def extract_from_file(filename, seconds = 1, instrument = "pol"):
     melspectrogram = create_melspectrogram(y, sr, n_fft=n_fft, hop_length=hop_length)
     modgdgram = create_modgdgram(y, sr)
     pitchgram = create_pitchgram(y, sr, hop_length=hop_length)
-    
+
     # Segementation of the spectogram
     seg_dur_mel = 100 * seconds
     seg_dur_modgd = 98 * seconds
@@ -100,16 +99,17 @@ def extract_from_file(filename, seconds = 1, instrument = "pol"):
     features["mels"] = mels
     features["modgds"] = modgds
     features["pitchs"] = pitchs
-    features["labels"] = np.zeros([11])
-    
-    if(instrument == "pol"):
-        with open(filename[:-4] + '.txt', 'r') as fp:
-            lines = fp.readlines()
-            for l in lines:
-                features["labels"][label_map[l[:3]]] = 1
-                
-    else:
-        features["labels"][label_map[instrument]] = 1
+    if(api == False):
+        features["labels"] = np.zeros([11])
+        
+        if(instrument == "pol"):
+            with open(filename[:-4] + '.txt', 'r') as fp:
+                lines = fp.readlines()
+                for l in lines:
+                    features["labels"][label_map[l[:3]]] = 1
+                    
+        else:
+            features["labels"][label_map[instrument]] = 1
                 
     
     return features
@@ -150,133 +150,139 @@ def main_testing():
                 features.append(feat)
     return features
 
-train_folder = '../../data/raw/IRMAS_Training_Data/'
-test_folder = "../../data/raw/IRMAS_Validation_Data/"
+# function definitions
+# ----------------------------------------------
+# main code
 
-label_map = {"cel": 0, "cla": 1, "flu": 2, "gac": 3, "gel": 4, "org": 5,
-             "pia": 6, "sax": 7, "tru": 8, "vio": 9, "voi": 10}
+if __name__ == "__main__":
 
-print("Training data preprocessing started!")
-train_data = main_training()
-print("Training data preprocessing finished!")
+    train_folder = '../dataset/raw/IRMAS_Training_Data/'
+    test_folder = "../dataset/raw/IRMAS_Validation_Data/"
 
-print("Spliting train data!")
+    label_map = {"cel": 0, "cla": 1, "flu": 2, "gac": 3, "gel": 4, "org": 5,
+                "pia": 6, "sax": 7, "tru": 8, "vio": 9, "voi": 10}
 
-X_mel = np.concatenate([feat["mels"] for feat in train_data])
-X_mel = np.expand_dims(X_mel, axis = 3)
-X_modgd = np.concatenate([feat["modgds"] for feat in train_data])
-X_modgd = np.expand_dims(X_modgd, axis = 3)
-X_pitch = np.concatenate([feat["pitchs"] for feat in train_data])
-X_pitch = np.expand_dims(X_pitch, axis = 3)
+    print("Training data preprocessing started!")
+    train_data = main_training()
+    print("Training data preprocessing finished!")
 
-y = np.concatenate([[feat["labels"] for i in range(len(feat["mels"]))] for feat in train_data])
+    print("Spliting train data!")
 
-# Randomly split training data -> 85% training set, 15% validation set
-I = np.array([i for i in range(len(y))])
-I_train, I_val, _, _ = train_test_split(I, I, test_size = 0.15, random_state = 42)
+    X_mel = np.concatenate([feat["mels"] for feat in train_data])
+    X_mel = np.expand_dims(X_mel, axis = 3)
+    X_modgd = np.concatenate([feat["modgds"] for feat in train_data])
+    X_modgd = np.expand_dims(X_modgd, axis = 3)
+    X_pitch = np.concatenate([feat["pitchs"] for feat in train_data])
+    X_pitch = np.expand_dims(X_pitch, axis = 3)
 
-X_train_mel = np.zeros((int(0.85 * len(I)), 128, 100, 1))
-X_val_mel = np.zeros((len(I) - len(X_train_mel), 128, 100, 1))
-X_train_modgd = np.zeros((int(0.85 * len(I)), 128, 98, 1))
-X_val_modgd = np.zeros((len(I) - len(X_train_modgd), 128, 98, 1))
-X_train_pitch = np.zeros((int(0.85 * len(I)), 36, 100, 1))
-X_val_pitch = np.zeros((len(I) - len(X_train_pitch), 36, 100, 1))
-y_train = np.zeros((int(0.85 * len(I)), 11))
-y_val = np.zeros((len(I) - len(y_train), 11))
+    y = np.concatenate([[feat["labels"] for i in range(len(feat["mels"]))] for feat in train_data])
 
-for i in range(len(I_train)):
-    X_train_mel[i] = X_mel[I_train[i]]
-    X_train_modgd[i] = X_modgd[I_train[i]]
-    X_train_pitch[i] = X_pitch[I_train[i]]
-    y_train[i] = y[I_train[i]]
-    
-for i in range(len(I_val)):
-    X_val_mel[i] = X_mel[I_val[i]]
-    X_val_modgd[i] = X_modgd[I_val[i]]
-    X_val_pitch[i] = X_pitch[I_val[i]]
-    y_val[i] = y[I_val[i]]
+    # Randomly split training data -> 85% training set, 15% validation set
+    I = np.array([i for i in range(len(y))])
+    I_train, I_val, _, _ = train_test_split(I, I, test_size = 0.15, random_state = 42)
 
-print("Finished splitting!")
+    X_train_mel = np.zeros((int(0.85 * len(I)), 128, 100, 1))
+    X_val_mel = np.zeros((len(I) - len(X_train_mel), 128, 100, 1))
+    X_train_modgd = np.zeros((int(0.85 * len(I)), 128, 98, 1))
+    X_val_modgd = np.zeros((len(I) - len(X_train_modgd), 128, 98, 1))
+    X_train_pitch = np.zeros((int(0.85 * len(I)), 36, 100, 1))
+    X_val_pitch = np.zeros((len(I) - len(X_train_pitch), 36, 100, 1))
+    y_train = np.zeros((int(0.85 * len(I)), 11))
+    y_val = np.zeros((len(I) - len(y_train), 11))
 
-# Save Numpy arrays and dictionaries
-print("Saving training data!")
+    for i in range(len(I_train)):
+        X_train_mel[i] = X_mel[I_train[i]]
+        X_train_modgd[i] = X_modgd[I_train[i]]
+        X_train_pitch[i] = X_pitch[I_train[i]]
+        y_train[i] = y[I_train[i]]
+        
+    for i in range(len(I_val)):
+        X_val_mel[i] = X_mel[I_val[i]]
+        X_val_modgd[i] = X_modgd[I_val[i]]
+        X_val_pitch[i] = X_pitch[I_val[i]]
+        y_val[i] = y[I_val[i]]
 
-np.save("../../data/processed/X_train_mel.npy", X_train_mel)
-np.save("../../data/processed/X_val_mel.npy", X_val_mel)
-np.save("../../data/processed/X_train_modgd.npy", X_train_modgd)
-np.save("../../data/processed/X_val_modgd.npy", X_val_modgd)
-np.save("../../data/processed/X_train_pitch.npy", X_train_pitch)
-np.save("../../data/processed/X_val_pitch.npy", X_val_pitch)
-np.save("../../data/processed/y_train.npy", y_train)
-np.save("../../data/processed/y_val.npy", y_val)
+    print("Finished splitting!")
 
-print("Saved training data!")
+    # Save Numpy arrays and dictionaries
+    print("Saving training data!")
 
-print("Testing started!")
-test_data = main_testing()
-print("Testing finished!")
+    np.save("../../data/processed/X_train_mel.npy", X_train_mel)
+    np.save("../../data/processed/X_val_mel.npy", X_val_mel)
+    np.save("../../data/processed/X_train_modgd.npy", X_train_modgd)
+    np.save("../../data/processed/X_val_modgd.npy", X_val_modgd)
+    np.save("../../data/processed/X_train_pitch.npy", X_train_pitch)
+    np.save("../../data/processed/X_val_pitch.npy", X_val_pitch)
+    np.save("../../data/processed/y_train.npy", y_train)
+    np.save("../../data/processed/y_val.npy", y_val)
 
-print("Test data!")
+    print("Saved training data!")
 
-# Initialize the testing feature and label dictionaries
-X_test_mel = OrderedDict()
-X_test_modgd = OrderedDict()
-X_test_pitch = OrderedDict()
-y_test = OrderedDict()
+    print("Testing started!")
+    test_data = main_testing()
+    print("Testing finished!")
 
-# Store the number of audio fragments per testing file
-num_fragments_per_file = [len(test_data[i]['mels']) for i, _ in enumerate(test_data)]
+    print("Test data!")
 
-# Fill the test data dictionaries
-for ix, _ in enumerate(test_data):
-    # Initialize the feature and lable matrices for test file at index ix
-    X_test_file_ix_mel = np.zeros((num_fragments_per_file[ix], 128, 100))
-    X_test_file_ix_modgd = np.zeros((num_fragments_per_file[ix], 128, 98))
-    X_test_file_ix_pitch = np.zeros((num_fragments_per_file[ix], 36, 100))
-    y_test_file_ix = np.zeros((num_fragments_per_file[ix], 11))
+    # Initialize the testing feature and label dictionaries
+    X_test_mel = OrderedDict()
+    X_test_modgd = OrderedDict()
+    X_test_pitch = OrderedDict()
+    y_test = OrderedDict()
 
-    label = test_data[ix]["labels"]
+    # Store the number of audio fragments per testing file
+    num_fragments_per_file = [len(test_data[i]['mels']) for i, _ in enumerate(test_data)]
 
-    j = 0
-    for feat in test_data[ix]['mels']:
-        X_test_file_ix_mel[j,:,:] = feat
-        y_test_file_ix[j,:] = label
-        j+=1
-    
-    j = 0
-    for feat in test_data[ix]['modgds']:
-        X_test_file_ix_modgd[j,:,:] = feat
-        j+=1
+    # Fill the test data dictionaries
+    for ix, _ in enumerate(test_data):
+        # Initialize the feature and lable matrices for test file at index ix
+        X_test_file_ix_mel = np.zeros((num_fragments_per_file[ix], 128, 100))
+        X_test_file_ix_modgd = np.zeros((num_fragments_per_file[ix], 128, 98))
+        X_test_file_ix_pitch = np.zeros((num_fragments_per_file[ix], 36, 100))
+        y_test_file_ix = np.zeros((num_fragments_per_file[ix], 11))
 
-    j = 0
-    for feat in test_data[ix]['pitchs']:
-        X_test_file_ix_pitch[j,:,:] = feat
-        j+=1
+        label = test_data[ix]["labels"]
 
-    X_test_mel[ix] = X_test_file_ix_mel
-    X_test_modgd[ix] = X_test_file_ix_modgd
-    X_test_pitch[ix] = X_test_file_ix_pitch
-    y_test[ix] = y_test_file_ix
+        j = 0
+        for feat in test_data[ix]['mels']:
+            X_test_file_ix_mel[j,:,:] = feat
+            y_test_file_ix[j,:] = label
+            j+=1
+        
+        j = 0
+        for feat in test_data[ix]['modgds']:
+            X_test_file_ix_modgd[j,:,:] = feat
+            j+=1
 
-print("Finished test data!")
+        j = 0
+        for feat in test_data[ix]['pitchs']:
+            X_test_file_ix_pitch[j,:,:] = feat
+            j+=1
 
-print("Saving test data!")
+        X_test_mel[ix] = X_test_file_ix_mel
+        X_test_modgd[ix] = X_test_file_ix_modgd
+        X_test_pitch[ix] = X_test_file_ix_pitch
+        y_test[ix] = y_test_file_ix
 
-f = open("../../data/processed/X_test_mel.pkl", "wb")
-pickle.dump(X_test_mel, f)
-f.close()
+    print("Finished test data!")
 
-f = open("../../data/processed/X_test_modgd.pkl", "wb")
-pickle.dump(X_test_modgd, f)
-f.close()
+    print("Saving test data!")
 
-f = open("../../data/processed/X_test_pitch.pkl", "wb")
-pickle.dump(X_test_pitch, f)
-f.close()
+    f = open("../../data/processed/X_test_mel.pkl", "wb")
+    pickle.dump(X_test_mel, f)
+    f.close()
 
-f = open("../../data/processed/y_test.pkl", "wb")
-pickle.dump(y_test, f)
-f.close()
+    f = open("../../data/processed/X_test_modgd.pkl", "wb")
+    pickle.dump(X_test_modgd, f)
+    f.close()
 
-print("Test data saved!")
+    f = open("../../data/processed/X_test_pitch.pkl", "wb")
+    pickle.dump(X_test_pitch, f)
+    f.close()
+
+    f = open("../../data/processed/y_test.pkl", "wb")
+    pickle.dump(y_test, f)
+    f.close()
+
+    print("Test data saved!")
 
