@@ -1,15 +1,11 @@
 
 import os
 import requests
-import pydub
-from pydub import AudioSegment
-from pydub.playback import play
 import json
 
+test_folder = "../data/test_dataset"
+
 BASE = "http://127.0.0.1:5050/predict_test"
-
-
-test_folder = "C:/Users/Fran/Documents/Lumen/lumen/dataset/raw/test_dataset" 
 
 
 files = [file[:-4] for file in os.listdir(test_folder) if file.endswith('.wav')]
@@ -24,8 +20,8 @@ for file in os.listdir(test_folder):
         with open(file_path, 'rb') as f:
             audio_file = f.read()
         filename = os.path.basename(file_path)
-        response = requests.post(BASE, files = {"audiofile" : audio_file})        
-        file_dict[filename] = response.json()
+        response = requests.post(BASE, files = {"audiofile" : audio_file})    
+        file_dict[filename[:-4]] = response.json()
         i = i + 1
         print(i)
 
