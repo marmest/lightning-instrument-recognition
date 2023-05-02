@@ -10,7 +10,9 @@ import tensorflow as tf
 from tensorflow import keras
 from keras.models import load_model 
 import numpy as np
-from data_preprocessing import extract_from_file
+import sys
+sys.path.append("../")
+from src.data.data_preprocessing import extract_from_file
 
 ALLOWED_EXTENSIONS = set(['wav'])
 def allowed_file(filename):
@@ -22,9 +24,9 @@ predictions_map = {0 : "cel", 1 : "cla", 2 : "flu", 3 : "gac", 4 : "gel", 5 : "o
 label_map = {"cel": 0, "cla": 1, "flu": 2, "gac": 3, "gel": 4, "org": 5,
              "pia": 6, "sax": 7, "tru": 8, "vio": 9, "voi": 10}
 
-model_mel = load_model("C:/Users/Fran/novi_lumen/models/cnn_mel_85_23.h5")
-model_modgd = load_model("C:/Users/Fran/novi_lumen/models/cnn_modgd_85_25.h5")
-model_pitch = load_model("C:/Users/Fran/novi_lumen/models/cnn_pitch_85_12.h5")
+model_mel = load_model("../models/cnn_mel_85_23.h5")
+model_modgd = load_model("../models/cnn_modgd_85_25.h5")
+model_pitch = load_model("../models/cnn_pitch_85_12.h5")
 
 def predict_instrument(audio_grams, type):
     val = np.reshape(audio_grams, (audio_grams.shape[0], audio_grams.shape[1], audio_grams.shape[2], 1))
