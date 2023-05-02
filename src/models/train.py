@@ -1,8 +1,9 @@
 import numpy as np
 import pickle
 import tensorflow as tf
-from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import Conv2D, GlobalMaxPooling2D, MaxPooling2D, Flatten, TimeDistributed, Dense, ZeroPadding2D, Dropout, BatchNormalization, LSTM, GRU, Bidirectional, ReLU, LeakyReLU, Reshape
+from tensorflow import keras
+from keras.models import Sequential
+from keras.layers import Conv2D, GlobalMaxPooling2D, MaxPooling2D, Flatten, TimeDistributed, Dense, ZeroPadding2D, Dropout, BatchNormalization, LSTM, GRU, Bidirectional, ReLU, LeakyReLU, Reshape
 from keras.callbacks import TensorBoard, ModelCheckpoint, EarlyStopping
 from keras.optimizers import Adam
 
@@ -167,16 +168,16 @@ print("Mel model training!")
 model_mel = create_model_mel()
 model_mel.compile(optimizer=Adam(learning_rate=0.001), loss='categorical_crossentropy', metrics=['accuracy'])
 
-model_mel = train_model(model_mel, X_train_mel, X_val_mel, y_train, y_val, epochs = 30, path = "checkpoints/cnn_mel_85")
+model_mel = train_model(model_mel, X_train_mel, X_val_mel, y_train, y_val, epochs = 30, path = "../../models/checkpoints/cnn_mel_85")
 
 print("Modgd model training!")
 model_modgd = create_model_modgd()
 model_modgd.compile(optimizer=Adam(learning_rate=0.001), loss='categorical_crossentropy', metrics=['accuracy'])
 
-model_modgd = train_model(model_modgd, X_train_modgd, X_val_modgd, y_train, y_val, epochs = 30, path = "checkpoints/cnn_modgd_85")
+model_modgd = train_model(model_modgd, X_train_modgd, X_val_modgd, y_train, y_val, epochs = 30, path = "../../models/checkpoints/cnn_modgd_85")
 
 print("Pitch model training!")
 model_pitch = create_model_mel()
 model_pitch.compile(optimizer=Adam(learning_rate=0.001), loss='categorical_crossentropy', metrics=['accuracy'])
 
-model_pitch = train_model(model_pitch, X_train_pitch, X_val_pitch, y_train, y_val, epochs = 30, path = "checkpoints/cnn_pitch_85") 
+model_pitch = train_model(model_pitch, X_train_pitch, X_val_pitch, y_train, y_val, epochs = 30, path = "../../models/checkpoints/cnn_pitch_85") 
