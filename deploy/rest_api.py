@@ -18,6 +18,7 @@ ALLOWED_EXTENSIONS = set(['wav'])
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1).lower() in ALLOWED_EXTENSIONS
 
+fusion_thresholds = np.load("../src/fusion/fusion_thresholds.npy")
 step_perc = 1.0 #koliko nam je step kad segmentiramo spektrogram - default 100%
 predictions_map = {0 : "cel", 1 : "cla", 2 : "flu", 3 : "gac", 4 : "gel", 5 : "org",
              6 : "pia", 7 : "sax", 8 : "tru", 9 : "vio", 10 : "voi"}
@@ -36,9 +37,10 @@ def predict_instrument(audio_grams, type):
         prediction = model_modgd.predict(val)
     else:
         prediction = model_pitch.predict(val)
-    prediction = np.sum(prediction, axis = 0)
-    m = np.max(prediction)
-    prediction /= m
+    #prediction = np.sum(prediction, axis = 0)
+    #m = np.max(prediction)
+    #prediction /= m
+    prediction = np.mean(prediction, axis = 0)
     return prediction
 
 # -----------------------------------------
@@ -59,12 +61,11 @@ def predict():
     prediction_modgds = predict_instrument(audio_grams['modgds'], 'modgds')
     prediction_pitchs = predict_instrument(audio_grams['pitchs'], 'pitchs')
 
-    predictions_all = []
     final_instruments = []
     for i in range(11):
-        predictions_all.append((prediction_mels[i] + prediction_modgds[i] + prediction_pitchs[i]) / 3)
-        if predictions_all[i] > 0.5:
+        if prediction_mels[i] > fusion_thresholds[i][0] and prediction_modgds[i] > fusion_thresholds[i][1] and prediction_pitchs[i] > fusion_thresholds[i][2]:
             final_instruments.append(predictions_map[i])
+
 
     return render_template('index.html', predictions = final_instruments)
 
@@ -82,8 +83,8 @@ def predict_test():
 
     dict = {}
     i = 0
-    for key in label_map.keys():   
-        if (prediction_mels[i] + prediction_modgds[i] + prediction_pitchs[i]) / 3 > 0.5:
+    for key in label_map.keys():
+        if prediction_mels[i] > fusion_thresholds[i][0] and prediction_modgds[i] > fusion_thresholds[i][1] and prediction_pitchs[i] > fusion_thresholds[i][2]:
             dict[key] = 1
         else:
             dict[key] = 0
