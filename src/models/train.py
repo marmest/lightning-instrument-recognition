@@ -1,8 +1,9 @@
 import numpy as np
 import pickle
 import tensorflow as tf
-from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import Conv2D, GlobalMaxPooling2D, MaxPooling2D, Flatten, TimeDistributed, Dense, ZeroPadding2D, Dropout, BatchNormalization, LSTM, GRU, Bidirectional, ReLU, LeakyReLU, Reshape
+from tensorflow import keras
+from keras.models import Sequential
+from keras.layers import Conv2D, GlobalMaxPooling2D, MaxPooling2D, Flatten, TimeDistributed, Dense, ZeroPadding2D, Dropout, BatchNormalization, LSTM, GRU, Bidirectional, ReLU, LeakyReLU, Reshape
 from keras.callbacks import TensorBoard, ModelCheckpoint, EarlyStopping
 from keras.optimizers import Adam
 
