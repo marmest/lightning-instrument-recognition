@@ -5,6 +5,7 @@ import os
 import scipy.signal 
 from sklearn.model_selection import train_test_split
 from collections import OrderedDict
+import torch
 
 step_perc = 1.0 #koliko nam je step kad segmentiramo spektrogram - default 100%
 
@@ -91,8 +92,11 @@ def extract_from_file(filename, seconds = 1, instrument = "pol", api = False):
     for idx in range(0, pitchgram.shape[1] - seg_dur_pitch + 1, int(step_perc * seg_dur_pitch)):
         pitchs.append(pitchgram[:, idx : (idx + seg_dur_pitch)])   
     mels = np.array(mels)
+    mels = torch.from_numpy(mels)
     modgds = np.array(modgds)
+    modgds = torch.from_numpy(modgds)
     pitchs = np.array(pitchs)
+    pitchs = torch.from_numpy(pitchs)
 
     features = {}
     
@@ -100,7 +104,7 @@ def extract_from_file(filename, seconds = 1, instrument = "pol", api = False):
     features["modgds"] = modgds
     features["pitchs"] = pitchs
     if(api == False):
-        features["labels"] = np.zeros([11])
+        features["labels"] = torch.zeros([11])
         
         if(instrument == "pol"):
             with open(filename[:-4] + '.txt', 'r') as fp:
@@ -156,8 +160,8 @@ def main_testing():
 
 if __name__ == "__main__":
 
-    train_folder = '../dataset/raw/IRMAS_Training_Data/'
-    test_folder = "../dataset/raw/IRMAS_Validation_Data/"
+    train_folder = '../../data/raw/IRMAS_Training_Data/'
+    test_folder = "../../data/raw/IRMAS_Validation_Data/"
 
     label_map = {"cel": 0, "cla": 1, "flu": 2, "gac": 3, "gel": 4, "org": 5,
                 "pia": 6, "sax": 7, "tru": 8, "vio": 9, "voi": 10}
@@ -168,27 +172,30 @@ if __name__ == "__main__":
 
     print("Spliting train data!")
 
-    X_mel = np.concatenate([feat["mels"] for feat in train_data])
-    X_mel = np.expand_dims(X_mel, axis = 3)
-    X_modgd = np.concatenate([feat["modgds"] for feat in train_data])
-    X_modgd = np.expand_dims(X_modgd, axis = 3)
-    X_pitch = np.concatenate([feat["pitchs"] for feat in train_data])
-    X_pitch = np.expand_dims(X_pitch, axis = 3)
+    # Convert numpy arrays to PyTorch tensors
+    train_data_tensors = [feat["mels"] for feat in train_data]
+    X_mel = torch.cat(train_data_tensors, dim=0).unsqueeze(3)
 
-    y = np.concatenate([[feat["labels"] for i in range(len(feat["mels"]))] for feat in train_data])
+    train_data_tensors = [feat["modgds"] for feat in train_data]
+    X_modgd = torch.cat(train_data_tensors, dim=0).unsqueeze(3)
+
+    train_data_tensors = [feat["pitchs"] for feat in train_data]
+    X_pitch = torch.cat(train_data_tensors, dim=0).unsqueeze(3)
+
+    y = torch.cat([torch.tensor(feat["labels"]).repeat(len(feat["mels"]), 1) for feat in train_data])
 
     # Randomly split training data -> 85% training set, 15% validation set
-    I = np.array([i for i in range(len(y))])
-    I_train, I_val, _, _ = train_test_split(I, I, test_size = 0.15, random_state = 42)
+    I = torch.arange(y.shape[0])
+    I_train, I_val, _, _ = train_test_split(I, I, test_size=0.15, random_state=42)
 
-    X_train_mel = np.zeros((int(0.85 * len(I)), 128, 100, 1))
-    X_val_mel = np.zeros((len(I) - len(X_train_mel), 128, 100, 1))
-    X_train_modgd = np.zeros((int(0.85 * len(I)), 128, 98, 1))
-    X_val_modgd = np.zeros((len(I) - len(X_train_modgd), 128, 98, 1))
-    X_train_pitch = np.zeros((int(0.85 * len(I)), 36, 100, 1))
-    X_val_pitch = np.zeros((len(I) - len(X_train_pitch), 36, 100, 1))
-    y_train = np.zeros((int(0.85 * len(I)), 11))
-    y_val = np.zeros((len(I) - len(y_train), 11))
+    X_train_mel = torch.zeros((int(0.85 * len(I)), 128, 100, 1))
+    X_val_mel = torch.zeros((len(I) - len(X_train_mel), 128, 100, 1))
+    X_train_modgd = torch.zeros((int(0.85 * len(I)), 128, 98, 1))
+    X_val_modgd = torch.zeros((len(I) - len(X_train_modgd), 128, 98, 1))
+    X_train_pitch = torch.zeros((int(0.85 * len(I)), 36, 100, 1))
+    X_val_pitch = torch.zeros((len(I) - len(X_train_pitch), 36, 100, 1))
+    y_train = torch.zeros((int(0.85 * len(I)), 11))
+    y_val = torch.zeros((len(I) - len(y_train), 11))
 
     for i in range(len(I_train)):
         X_train_mel[i] = X_mel[I_train[i]]
@@ -207,14 +214,14 @@ if __name__ == "__main__":
     # Save Numpy arrays and dictionaries
     print("Saving training data!")
 
-    np.save("../../data/processed/X_train_mel.npy", X_train_mel)
-    np.save("../../data/processed/X_val_mel.npy", X_val_mel)
-    np.save("../../data/processed/X_train_modgd.npy", X_train_modgd)
-    np.save("../../data/processed/X_val_modgd.npy", X_val_modgd)
-    np.save("../../data/processed/X_train_pitch.npy", X_train_pitch)
-    np.save("../../data/processed/X_val_pitch.npy", X_val_pitch)
-    np.save("../../data/processed/y_train.npy", y_train)
-    np.save("../../data/processed/y_val.npy", y_val)
+    torch.save(X_train_mel, "../../data/processed/X_train_mel.pt")
+    torch.save(X_val_mel, "../../data/processed/X_val_mel.pt")
+    torch.save(X_train_modgd, "../../data/processed/X_train_modgd.pt")
+    torch.save(X_val_modgd, "../../data/processed/X_val_modgd.pt")
+    torch.save(X_train_pitch, "../../data/processed/X_train_pitch.pt")
+    torch.save(X_val_pitch, "../../data/processed/X_val_pitch.pt")
+    torch.save(y_train, "../../data/processed/y_train.pt")
+    torch.save(y_val, "../../data/processed/y_val.pt")
 
     print("Saved training data!")
 
@@ -236,10 +243,10 @@ if __name__ == "__main__":
     # Fill the test data dictionaries
     for ix, _ in enumerate(test_data):
         # Initialize the feature and lable matrices for test file at index ix
-        X_test_file_ix_mel = np.zeros((num_fragments_per_file[ix], 128, 100))
-        X_test_file_ix_modgd = np.zeros((num_fragments_per_file[ix], 128, 98))
-        X_test_file_ix_pitch = np.zeros((num_fragments_per_file[ix], 36, 100))
-        y_test_file_ix = np.zeros((num_fragments_per_file[ix], 11))
+        X_test_file_ix_mel = torch.zeros((num_fragments_per_file[ix], 128, 100))
+        X_test_file_ix_modgd = torch.zeros((num_fragments_per_file[ix], 128, 98))
+        X_test_file_ix_pitch = torch.zeros((num_fragments_per_file[ix], 36, 100))
+        y_test_file_ix = torch.zeros((num_fragments_per_file[ix], 11))
 
         label = test_data[ix]["labels"]
 
