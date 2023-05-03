@@ -6,7 +6,7 @@ from torch.utils.data import TensorDataset, DataLoader
 
 
 #hyper parameters
-epochs = 1
+epochs = 30
 batch_size = 128
 lr = 0.001
 
