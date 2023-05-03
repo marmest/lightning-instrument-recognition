@@ -1,0 +1,37 @@
+constants:
+  num_classes: 11
+
+preprocessing:
+  mono: True
+  sample_rate: 22050
+  step_perc: 1.0
+  seconds: 1
+  n_fft_mel: 255
+  hop_length_mel: 220
+  n_frequency_bins_modgd: 128
+  frame_size_modgd: 0.05
+  hop_size_modgd: 0.01
+  alpha: 0.9
+  gamma: 0.5
+  nc: 10
+  hop_length_pitch: 220
+
+training:
+  split_perc: 0.85
+
+paths:
+  train_folder: "../../data/raw/IRMAS_Training_Data/"
+  test_folder: "../../data/raw/IRMAS_Validation_Data/"
+
+label_map:
+  "cel": 0
+  "cla": 1
+  "flu": 2
+  "gac": 3
+  "gel": 4
+  "org": 5
+  "pia": 6
+  "sax": 7
+  "tru": 8
+  "vio": 9
+  "voi": 10
