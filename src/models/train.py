@@ -1,14 +1,21 @@
+import hydra
+from hydra import compose, initialize
+
 import numpy as np
 import sys
 import torch
 import torch.nn as nn
 from torch.utils.data import TensorDataset, DataLoader
 
+# global initialization
+initialize(version_base=None, config_path="../../configs")
+cfg = compose(config_name="config")
+
 
 #hyper parameters
-epochs = 30
-batch_size = 128
-lr = 0.001
+epochs = cfg.training.epochs
+batch_size = cfg.training.batch_size
+lr = cfg.training.learning_rate
 
 #device config
 print(torch.cuda.is_available())

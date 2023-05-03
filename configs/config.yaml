@@ -18,6 +18,9 @@ preprocessing:
 
 training:
   split_perc: 0.85
+  epochs: 30
+  batch_size: 128
+  learning_rate: 0.001
 
 paths:
   train_folder: "../../data/raw/IRMAS_Training_Data/"
