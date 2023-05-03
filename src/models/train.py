@@ -6,7 +6,7 @@ from torch.utils.data import TensorDataset, DataLoader
 
 
 #hyper parameters
-epochs = 30
+epochs = 1
 batch_size = 128
 lr = 0.001
 
@@ -17,6 +17,80 @@ device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 #model architecture
 class CNN_mel(nn.Module):
+    def __init__(self):
+        super(CNN_mel, self).__init__()
+
+        self.conv1 = nn.Conv2d(1, 8, kernel_size=3, padding=1)
+        self.leakyrelu1 = nn.LeakyReLU(negative_slope=0.33)
+        self.conv2 = nn.Conv2d(8, 16, kernel_size=3, padding=1)
+        self.leakyrelu2 = nn.LeakyReLU(negative_slope=0.33)
+        self.pool1 = nn.MaxPool2d(kernel_size=3, stride=3)
+        self.dropout1 = nn.Dropout2d(p=0.25)
+
+        self.conv3 = nn.Conv2d(16, 24, kernel_size=3, padding=1)
+        self.leakyrelu3 = nn.LeakyReLU(negative_slope=0.33)
+        self.conv4 = nn.Conv2d(24, 32, kernel_size=3, padding=1)
+        self.leakyrelu4 = nn.LeakyReLU(negative_slope=0.33)
+        self.pool2 = nn.MaxPool2d(kernel_size=3, stride=3)
+        self.dropout2 = nn.Dropout2d(p=0.25)
+
+        self.conv5 = nn.Conv2d(32, 64, kernel_size=3, padding=1)
+        self.leakyrelu5 = nn.LeakyReLU(negative_slope=0.33)
+        self.conv6 = nn.Conv2d(64, 128, kernel_size=3, padding=1)
+        self.leakyrelu6 = nn.LeakyReLU(negative_slope=0.33)
+        self.pool3 = nn.MaxPool2d(kernel_size=3, stride=3)
+        self.dropout3 = nn.Dropout2d(p=0.25)
+
+        self.conv7 = nn.Conv2d(128, 256, kernel_size=3, padding=1)
+        self.leakyrelu7 = nn.LeakyReLU(negative_slope=0.33)
+        self.conv8 = nn.Conv2d(256, 512, kernel_size=3, padding=1)
+        self.leakyrelu8 = nn.LeakyReLU(negative_slope=0.33)
+        self.pool4 = nn.MaxPool2d(kernel_size=3, stride=3)
+        self.dropout4 = nn.Dropout2d(p=0.25)
+
+        self.globalpool = nn.AdaptiveMaxPool2d((1,1))
+
+        self.fc1 = nn.Linear(512, 1024)
+        self.dropout5 = nn.Dropout(p=0.5)
+        self.fc2 = nn.Linear(1024, 11)
+
+    def forward(self, x):
+        x = self.conv1(x)
+        x = self.leakyrelu1(x)
+        x = self.conv2(x)
+        x = self.leakyrelu2(x)
+        x = self.pool1(x)
+        x = self.dropout1(x)
+
+        x = self.conv3(x)
+        x = self.leakyrelu3(x)
+        x = self.conv4(x)
+        x = self.leakyrelu4(x)
+        x = self.pool2(x)
+        x = self.dropout2(x)
+
+        x = self.conv5(x)
+        x = self.leakyrelu5(x)
+        x = self.conv6(x)
+        x = self.leakyrelu6(x)
+        x = self.pool3(x)
+        x = self.dropout3(x)
+
+        x = self.conv7(x)
+        x = self.leakyrelu7(x)
+        x = self.conv8(x)
+        x = self.leakyrelu8(x)
+        x = self.pool4(x)
+        x = self.dropout4(x)
+        x = self.globalpool(x)
+        x = x.view(-1, 512)
+        x = self.fc1(x)
+        x = self.dropout5(x)
+        x = self.fc2(x)
+
+        return x
+    
+class CNN_modgd(nn.Module):
     def __init__(self):
         super(CNN_mel, self).__init__()
 
@@ -154,7 +228,7 @@ class CNN_pitch(nn.Module):
         return x
 
 #training loop
-def train(model, optimizer, criterion, train_loader, val_loader, epochs, path='../../models/checkpoints/cnn_mel.pt'):
+def train(model, optimizer, criterion, train_loader, val_loader, epochs, path='../../models/cnn_mel.pt'):
     min_val_loss = 1000.0
     for epoch in range(epochs):
         #training
@@ -188,7 +262,8 @@ def train(model, optimizer, criterion, train_loader, val_loader, epochs, path='.
         # Save best model
         if val_loss < min_val_loss:
             min_val_loss = val_loss
-            torch.save(model.state_dict(), path)
+            model_scripted = torch.jit.script(model) # Export to TorchScript
+            model_scripted.save(path) # Save
 
         print(f'Epoch: {epoch}, Train Loss: {loss:.5f}, Val Loss: {val_loss:.5f}, Min Val Loss: {min_val_loss:.5f}')
 
@@ -230,7 +305,7 @@ train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
 val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
 print('X_train_modgd, y_train_modgd loaded!')
 
-train(model, optimizer, criterion, train_loader, val_loader, epochs, path='../../models/checkpoints/cnn_modgd.pt')
+train(model, optimizer, criterion, train_loader, val_loader, epochs, path='../../models/cnn_modgd.pt')
 
 #pitchgram training
 model = CNN_pitch().to(device)
@@ -250,4 +325,4 @@ train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
 val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
 print('X_train_pitch, y_train_pitch loaded!')
 
-train(model, optimizer, criterion, train_loader, val_loader, epochs, path='../../models/checkpoints/cnn_pitch.pt')
+train(model, optimizer, criterion, train_loader, val_loader, epochs, path='../../models/cnn_pitch.pt')
