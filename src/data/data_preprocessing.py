@@ -40,9 +40,8 @@ split_perc = cfg.training.split_perc
 train_folder = cfg.paths.train_folder
 test_folder = cfg.paths.test_folder
 
-#label_map = {"cel": 0, "cla": 1, "flu": 2, "gac": 3, "gel": 4, "org": 5, "pia": 6, "sax": 7, "tru": 8, "vio": 9, "voi": 10}
+# label_map
 label_map = cfg.label_map
-print(label_map)
 
 
 def create_melspectrogram(x, sr, n_fft, hop_length):
@@ -116,7 +115,6 @@ def extract_from_file(filename, instrument = "pol", api = False):
     pitchgram = create_pitchgram(y, sr, hop_length=hop_length_pitch)
 
     # Segementation of the spectogram
-    print(melspectrogram.shape)
     seg_dur_mel = int(100 * seconds)
     seg_dur_modgd = int(98 * seconds)
     seg_dur_pitch = int(100 * seconds)
@@ -144,8 +142,6 @@ def extract_from_file(filename, instrument = "pol", api = False):
     modgds = torch.from_numpy(modgds)
     pitchs = np.array(pitchs)
     pitchs = torch.from_numpy(pitchs)
-
-    print(list(mels.size()))
 
     features = {}
     
@@ -200,7 +196,6 @@ def main_testing():
                 count += 1
                 print(count, "/", total_files)
                 feat = extract_from_file(test_folder + file)
-                print(list(feat["mels"].size()))
                 features.append(feat)
     return features
 
