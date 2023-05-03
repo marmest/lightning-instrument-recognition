@@ -214,6 +214,13 @@ if __name__ == "__main__":
     # Save Numpy arrays and dictionaries
     print("Saving training data!")
 
+    X_train_mel = X_train_mel.view(X_train_mel.size(0), 1, X_train_mel.size(1), X_train_mel.size(2))
+    X_val_mel = X_val_mel.view(X_val_mel.size(0), 1, X_val_mel.size(1), X_val_mel.size(2))
+    X_train_modgd = X_train_modgd.view(X_train_modgd.size(0), 1, X_train_modgd.size(1), X_train_modgd.size(2))
+    X_val_modgd = X_val_modgd.view(X_val_modgd.size(0), 1, X_val_modgd.size(1), X_val_modgd.size(2))
+    X_train_pitch = X_train_pitch.view(X_train_pitch.size(0), 1, X_train_pitch.size(1), X_train_pitch.size(2))
+    X_val_pitch = X_val_pitch.view(X_val_pitch.size(0), 1, X_val_pitch.size(1), X_val_pitch.size(2))
+
     torch.save(X_train_mel, "../../data/processed/X_train_mel.pt")
     torch.save(X_val_mel, "../../data/processed/X_val_mel.pt")
     torch.save(X_train_modgd, "../../data/processed/X_train_modgd.pt")
