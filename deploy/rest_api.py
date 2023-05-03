@@ -36,6 +36,7 @@ model_pitch = model_pitch.to(device)
 def predict_instrument(audio_grams, type):
     val = audio_grams.to(device)
     val = val.view(val.size(0), 1, val.size(1), val.size(2))
+    val = val.float()
     if type == 'mels':
         prediction = model_mel(val)
     elif type == 'modgds':
