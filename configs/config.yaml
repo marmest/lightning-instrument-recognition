@@ -22,9 +22,17 @@ training:
   batch_size: 128
   learning_rate: 0.001
 
+aggregation:
+  method: "s1"
+
+fusion:
+  theta_step: 0.05
+  method: ""
+
 paths:
   train_folder: "../../data/raw/IRMAS_Training_Data/"
   test_folder: "../../data/raw/IRMAS_Validation_Data/"
+  models_folder: "../../models/"
 
 label_map:
   "cel": 0

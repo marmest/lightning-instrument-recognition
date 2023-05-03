@@ -1,9 +1,16 @@
+import hydra
+from hydra import compose, initialize
+
 import numpy as np
 import torch
 import torch.nn as nn
 import pickle
 import sys
 import os
+
+# global initialization
+initialize(version_base=None, config_path="../../configs")
+cfg = compose(config_name="config")
 
 #device config
 print(torch.cuda.is_available())
@@ -17,10 +24,21 @@ def calculate_acc(y1, y2):
     ret /= len(y1)
     return ret
 
-models_dir = "../../models/"
+# constants
+num_classes = cfg.constants.num_classes
 
-label_map = {"cel": 0, "cla": 1, "flu": 2, "gac": 3, "gel": 4, "org": 5,
-             "pia": 6, "sax": 7, "tru": 8, "vio": 9, "voi": 10}
+# paths
+models_dir = cfg.paths.models_folder
+
+# label map
+label_map = cfg.label_map
+
+# methods
+aggregation_method = cfg.aggregation.method
+fusion_method = cfg.fusion.method
+
+# fusion
+theta_step = cfg.fusion.theta_step
 
 models = []
 model_names = []
@@ -59,7 +77,7 @@ f.close()
 X_test = [X_test_mel, X_test_modgd, X_test_pitch]
 
 a = y_test
-y_test = torch.zeros((len(a), 11))
+y_test = torch.zeros((len(a), num_classes))
 for i in range(len(a)):
     y_test[i] = a[i][0]
 
@@ -84,10 +102,12 @@ for i in range(n):
         prediction = model(val)
 
         # Aggregation
-        prediction = torch.mean(prediction, axis = 0)
-        #prediction = torch.sum(prediction, axis = 0)
-        #m = torch.max(prediction)
-        #prediction /= m
+        if aggregation_method == "s1":
+            prediction = torch.mean(prediction, axis = 0)
+        elif aggregation_method == "s2":
+            prediction = torch.sum(prediction, axis = 0)
+            m = torch.max(prediction)
+            prediction /= m
         tmp_probs.append(prediction.detach().cpu().numpy())
         
     tmp_probs = np.array(tmp_probs)
@@ -99,34 +119,36 @@ print("Probabilities computed!")
 
 y_pred = np.zeros((probabilities.shape[1], probabilities.shape[2]))
 mul_probabilities = np.zeros((probabilities.shape[1], probabilities.shape[2]))
-fusion = np.zeros((11, 3))
-thetas = np.arange(0, 1.01, 0.05)
+fusion = np.zeros((num_classes, 3))
+thetas = np.arange(0, 1.01, theta_step)
 
-for k in range(mul_probabilities.shape[1]):
-    best_acc = 0.0
-    for theta1 in thetas:
-        for theta2 in thetas:
-            for theta3 in thetas:
-                tmp_pred1 = np.array(probabilities[0, :, k]) - theta1
-                tmp_pred2 = np.array(probabilities[1, :, k]) - theta2
-                tmp_pred3 = np.array(probabilities[2, :, k]) - theta3
+if fusion_method == 1:
+    
+    for k in range(mul_probabilities.shape[1]):
+        best_acc = 0.0
+        for theta1 in thetas:
+            for theta2 in thetas:
+                for theta3 in thetas:
+                    tmp_pred1 = np.array(probabilities[0, :, k]) - theta1
+                    tmp_pred2 = np.array(probabilities[1, :, k]) - theta2
+                    tmp_pred3 = np.array(probabilities[2, :, k]) - theta3
 
-                tmp_pred1[tmp_pred1 > 0] = 1
-                tmp_pred1[tmp_pred1 <= 0] = 0
-                tmp_pred2[tmp_pred2 > 0] = 1
-                tmp_pred2[tmp_pred2 <= 0] = 0
-                tmp_pred3[tmp_pred3 > 0] = 1
-                tmp_pred3[tmp_pred3 <= 0] = 0
+                    tmp_pred1[tmp_pred1 > 0] = 1
+                    tmp_pred1[tmp_pred1 <= 0] = 0
+                    tmp_pred2[tmp_pred2 > 0] = 1
+                    tmp_pred2[tmp_pred2 <= 0] = 0
+                    tmp_pred3[tmp_pred3 > 0] = 1
+                    tmp_pred3[tmp_pred3 <= 0] = 0
 
-                tmp_pred = np.multiply(np.multiply(tmp_pred1, tmp_pred2), tmp_pred3)
+                    tmp_pred = np.multiply(np.multiply(tmp_pred1, tmp_pred2), tmp_pred3)
 
-                acc = calculate_acc(tmp_pred, y_test[:, k])
+                    acc = calculate_acc(tmp_pred, y_test[:, k])
 
-                if acc > best_acc:
-                    best_acc = acc
-                    y_pred[:, k] = tmp_pred
-                    fusion[k, :] = [theta1, theta2, theta3]
-                
-    print(fusion[k][0], ", ", fusion[k][1], ", ", fusion[k][2], sep = '')
+                    if acc > best_acc:
+                        best_acc = acc
+                        y_pred[:, k] = tmp_pred
+                        fusion[k, :] = [theta1, theta2, theta3]
+                    
+        print(fusion[k][0], ", ", fusion[k][1], ", ", fusion[k][2], sep = '')
 
 np.save("fusion_thresholds.npy", fusion)
