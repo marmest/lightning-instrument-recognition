@@ -181,14 +181,14 @@ if fusion_method == 1:
 
                     tmp_pred = np.multiply(np.multiply(tmp_pred1, tmp_pred2), tmp_pred3)
 
-                    if optimization_metric == "accuracy":
+                    if optimization_metric == "acc":
                         acc = calculate_acc(tmp_pred, y_test[:, k])
                         if acc > best_acc:
                             best_acc = acc
                             y_pred[:, k] = tmp_pred
                             fusion[k, :] = fusion_thetas
                     
-                    elif optimization_metric == "f1_score":
+                    elif optimization_metric == "f1":
                         f1 = calculate_f1(tmp_pred, y_test[:, k])
                         if f1 > best_f1:
                             best_f1 = f1
@@ -198,10 +198,11 @@ if fusion_method == 1:
         print(fusion[k][0], ", ", fusion[k][1], ", ", fusion[k][2], sep = '')
 
 # Save fusion thresholds
-save_str = "fusion_thresholds"
+save_str = "fusion_thresholds_"
 for model_name in version:
-    save_str += "_"
     save_str += model_name
+    save_str += "_"
+save_str += optimization_metric
 save_str += ".npy"
 #np.save("fusion_thresholds.npy", fusion)
 np.save(save_str, fusion)

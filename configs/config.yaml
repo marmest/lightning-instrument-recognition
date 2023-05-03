@@ -29,7 +29,7 @@ aggregation:
 fusion:
   theta_step: 0.05
   method: ""
-  optimization_metric: "accuracy"
+  optimization_metric: "acc"
   version: ["mel", "modgd", "pitch"]
 
 paths:
