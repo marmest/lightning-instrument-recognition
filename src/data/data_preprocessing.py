@@ -106,6 +106,7 @@ def extract_from_file(filename, instrument = "pol", api = False):
 
     # Read the data
     y, sr = librosa.load(filename, sr=sample_rate, mono=mono)
+    dur = int(len(y) / sr)
     
     melspectrogram = create_melspectrogram(y, sr, n_fft=n_fft_mel, hop_length=hop_length_mel)
 
@@ -115,25 +116,36 @@ def extract_from_file(filename, instrument = "pol", api = False):
     pitchgram = create_pitchgram(y, sr, hop_length=hop_length_pitch)
 
     # Segementation of the spectogram
-    seg_dur_mel = (melspectrogram.shape[1] // 3) * seconds
-    seg_dur_modgd = (modgdgram.shape[1] // 3) * seconds
-    seg_dur_pitch = (pitchgram.shape[1] // 3) * seconds
+    print(melspectrogram.shape)
+    seg_dur_mel = int(100 * seconds)
+    seg_dur_modgd = int(98 * seconds)
+    seg_dur_pitch = int(100 * seconds)
 
     mels = []
     modgds = []
     pitchs = []
-    for idx in range(0, melspectrogram.shape[1] - seg_dur_mel + 1, int(step_perc * seg_dur_mel)):
-        mels.append(melspectrogram[:, idx : (idx + seg_dur_mel)])
-    for idx in range(0, modgdgram.shape[1] - seg_dur_modgd + 1, int(step_perc * seg_dur_modgd)):
-        modgds.append(modgdgram[:, idx : (idx + seg_dur_modgd)])
-    for idx in range(0, pitchgram.shape[1] - seg_dur_pitch + 1, int(step_perc * seg_dur_pitch)):
-        pitchs.append(pitchgram[:, idx : (idx + seg_dur_pitch)])   
+    if instrument == "pol":
+        for idx in range(0, melspectrogram.shape[1] - seg_dur_mel + 1, int(step_perc * seg_dur_mel)):
+            mels.append(melspectrogram[:, idx : (idx + seg_dur_mel)])
+        for idx in range(0, modgdgram.shape[1] - seg_dur_modgd + 1, int(step_perc * seg_dur_modgd)):
+            modgds.append(modgdgram[:, idx : (idx + seg_dur_modgd)])
+        for idx in range(0, pitchgram.shape[1] - seg_dur_pitch + 1, int(step_perc * seg_dur_pitch)):
+            pitchs.append(pitchgram[:, idx : (idx + seg_dur_pitch)])   
+    else:
+        for idx in range(0, melspectrogram.shape[1] - seg_dur_mel + 1, seg_dur_mel):
+            mels.append(melspectrogram[:, idx : (idx + seg_dur_mel)])
+        for idx in range(0, modgdgram.shape[1] - seg_dur_modgd + 1, seg_dur_modgd):
+            modgds.append(modgdgram[:, idx : (idx + seg_dur_modgd)])
+        for idx in range(0, pitchgram.shape[1] - seg_dur_pitch + 1, seg_dur_pitch):
+            pitchs.append(pitchgram[:, idx : (idx + seg_dur_pitch)])  
     mels = np.array(mels)
     mels = torch.from_numpy(mels)
     modgds = np.array(modgds)
     modgds = torch.from_numpy(modgds)
     pitchs = np.array(pitchs)
     pitchs = torch.from_numpy(pitchs)
+
+    print(list(mels.size()))
 
     features = {}
     
@@ -188,6 +200,7 @@ def main_testing():
                 count += 1
                 print(count, "/", total_files)
                 feat = extract_from_file(test_folder + file)
+                print(list(feat["mels"].size()))
                 features.append(feat)
     return features
 
