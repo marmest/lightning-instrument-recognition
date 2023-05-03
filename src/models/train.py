@@ -17,6 +17,9 @@ epochs = cfg.training.epochs
 batch_size = cfg.training.batch_size
 lr = cfg.training.learning_rate
 
+#models
+models = cfg.training.models
+
 #device config
 print(torch.cuda.is_available())
 print(torch.__version__)
@@ -275,61 +278,64 @@ def train(model, optimizer, criterion, train_loader, val_loader, epochs, path='.
         print(f'Epoch: {epoch}, Train Loss: {loss:.5f}, Val Loss: {val_loss:.5f}, Min Val Loss: {min_val_loss:.5f}')
 
 #mel training
-model = CNN_mel().to(device)
-optimizer = torch.optim.Adam(model.parameters(), lr=lr)
-criterion = nn.CrossEntropyLoss()
+if "mel" in models:
+    model = CNN_mel().to(device)
+    optimizer = torch.optim.Adam(model.parameters(), lr=lr)
+    criterion = nn.CrossEntropyLoss()
 
-X_train_mel = torch.load('../../data/processed/X_train_mel.pt')
-X_val_mel = torch.load('../../data/processed/X_val_mel.pt')
+    X_train_mel = torch.load('../../data/processed/X_train_mel.pt')
+    X_val_mel = torch.load('../../data/processed/X_val_mel.pt')
 
-y_train = torch.load('../../data/processed/y_train.pt')
-y_val = torch.load('../../data/processed/y_val.pt')
+    y_train = torch.load('../../data/processed/y_train.pt')
+    y_val = torch.load('../../data/processed/y_val.pt')
 
-train_dataset = TensorDataset(X_train_mel, y_train)
-val_dataset = TensorDataset(X_val_mel, y_val)
+    train_dataset = TensorDataset(X_train_mel, y_train)
+    val_dataset = TensorDataset(X_val_mel, y_val)
 
-train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
-val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
-print('X_train_mel, y_train_mel loaded!')
+    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
+    val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
+    print('X_train_mel, y_train_mel loaded!')
 
-train(model, optimizer, criterion, train_loader, val_loader, epochs)
+    train(model, optimizer, criterion, train_loader, val_loader, epochs)
 
 #modgd training
-model = CNN_mel().to(device)
-optimizer = torch.optim.Adam(model.parameters(), lr=lr)
-criterion = nn.CrossEntropyLoss()
+if "modgd" in models:
+    model = CNN_mel().to(device)
+    optimizer = torch.optim.Adam(model.parameters(), lr=lr)
+    criterion = nn.CrossEntropyLoss()
 
-X_train_modgd = torch.load('../../data/processed/X_train_modgd.pt')
-X_val_modgd = torch.load('../../data/processed/X_val_modgd.pt')
+    X_train_modgd = torch.load('../../data/processed/X_train_modgd.pt')
+    X_val_modgd = torch.load('../../data/processed/X_val_modgd.pt')
 
-y_train = torch.load('../../data/processed/y_train.pt')
-y_val = torch.load('../../data/processed/y_val.pt')
+    y_train = torch.load('../../data/processed/y_train.pt')
+    y_val = torch.load('../../data/processed/y_val.pt')
 
-train_dataset = TensorDataset(X_train_modgd, y_train)
-val_dataset = TensorDataset(X_val_modgd, y_val)
+    train_dataset = TensorDataset(X_train_modgd, y_train)
+    val_dataset = TensorDataset(X_val_modgd, y_val)
 
-train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
-val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
-print('X_train_modgd, y_train_modgd loaded!')
+    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
+    val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
+    print('X_train_modgd, y_train_modgd loaded!')
 
-train(model, optimizer, criterion, train_loader, val_loader, epochs, path='../../models/cnn_modgd.pt')
+    train(model, optimizer, criterion, train_loader, val_loader, epochs, path='../../models/cnn_modgd.pt')
 
-#pitchgram training
-model = CNN_pitch().to(device)
-optimizer = torch.optim.Adam(model.parameters(), lr=lr)
-criterion = nn.CrossEntropyLoss()
+if "pitch" in models:
+    #pitchgram training
+    model = CNN_pitch().to(device)
+    optimizer = torch.optim.Adam(model.parameters(), lr=lr)
+    criterion = nn.CrossEntropyLoss()
 
-X_train_pitch = torch.load('../../data/processed/X_train_pitch.pt')
-X_val_pitch = torch.load('../../data/processed/X_val_pitch.pt')
+    X_train_pitch = torch.load('../../data/processed/X_train_pitch.pt')
+    X_val_pitch = torch.load('../../data/processed/X_val_pitch.pt')
 
-y_train = torch.load('../../data/processed/y_train.pt')
-y_val = torch.load('../../data/processed/y_val.pt')
+    y_train = torch.load('../../data/processed/y_train.pt')
+    y_val = torch.load('../../data/processed/y_val.pt')
 
-train_dataset = TensorDataset(X_train_pitch, y_train)
-val_dataset = TensorDataset(X_val_pitch, y_val)
+    train_dataset = TensorDataset(X_train_pitch, y_train)
+    val_dataset = TensorDataset(X_val_pitch, y_val)
 
-train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
-val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
-print('X_train_pitch, y_train_pitch loaded!')
+    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
+    val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
+    print('X_train_pitch, y_train_pitch loaded!')
 
-train(model, optimizer, criterion, train_loader, val_loader, epochs, path='../../models/cnn_pitch.pt')
+    train(model, optimizer, criterion, train_loader, val_loader, epochs, path='../../models/cnn_pitch.pt')

@@ -17,6 +17,7 @@ preprocessing:
   hop_length_pitch: 220
 
 training:
+  models: ["mel", "modgd", "pitch"]
   split_perc: 0.85
   epochs: 30
   batch_size: 128
