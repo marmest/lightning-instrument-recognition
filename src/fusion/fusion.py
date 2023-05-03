@@ -24,6 +24,20 @@ def calculate_acc(y1, y2):
     ret /= len(y1)
     return ret
 
+def calculate_f1(y1, y2):
+    tp = 0
+    fp = 0
+    fn = 0
+    for i, _ in enumerate(y1):
+        if y1[i] == 1 and y2[i] == 1:
+            tp += 1
+        elif y1[i] == 1 and y2[i] == 0:
+            fp += 1
+        elif y1[i] == 0 and y2[i] == 1:
+            fn += 1
+    f1 = (2 * tp) / (2 * tp + fp + fn)
+    return f1
+
 # constants
 num_classes = cfg.constants.num_classes
 
@@ -39,6 +53,8 @@ fusion_method = cfg.fusion.method
 
 # fusion
 theta_step = cfg.fusion.theta_step
+version = cfg.fusion.version
+optimization_metric = cfg.fusion.optimization_metric
 
 models = []
 model_names = []
@@ -51,7 +67,7 @@ for root, dirs, files in os.walk(models_dir):
             model = model.to(device)
             model_names.append(file)
             models.append(model)
-n = len(models)
+num_models = len(models)
 print(model_names)
 
 print("Load X_test and y_test")
@@ -86,17 +102,15 @@ print("Loaded!")
 print("Computing probabilities")
 probabilities = []
 
-for i in range(n):
+for i in range(num_models):
     tmp_probs = []
     model = models[i]
     model.eval()
     for (key, val) in X_test[i].items():
+
         val = val.to(device)
         
-        #print(i, ":", key, "/", len(X_test[i]))
-        
         # Model prediction
-        #val = torch.view(val, (val.shape[0], val.shape[1], val.shape[2], 1))
         val = val.view(val.size(0), 1, val.size(1), val.size(2))
         print(val.shape)
         prediction = model(val)
@@ -119,16 +133,27 @@ print("Probabilities computed!")
 
 y_pred = np.zeros((probabilities.shape[1], probabilities.shape[2]))
 mul_probabilities = np.zeros((probabilities.shape[1], probabilities.shape[2]))
-fusion = np.zeros((num_classes, 3))
+fusion = np.zeros((num_classes, num_models))
 thetas = np.arange(0, 1.01, theta_step)
 
 if fusion_method == 1:
     
-    for k in range(mul_probabilities.shape[1]):
+    thetas_mel = thetas
+    if "mel" not in version:
+        thetas_mel = [-1]
+    thetas_modgd = thetas
+    if "modgd" not in version:
+        thetas_modgd = [-1]
+    thetas_pitch = thetas
+    if "pitch" not in version:
+        thetas_pitch = [-1]
+
+    for k in range(num_classes):
         best_acc = 0.0
-        for theta1 in thetas:
-            for theta2 in thetas:
-                for theta3 in thetas:
+        best_f1 = 0.0
+        for theta1 in thetas_mel:
+            for theta2 in thetas_modgd:
+                for theta3 in thetas_pitch:
                     tmp_pred1 = np.array(probabilities[0, :, k]) - theta1
                     tmp_pred2 = np.array(probabilities[1, :, k]) - theta2
                     tmp_pred3 = np.array(probabilities[2, :, k]) - theta3
@@ -140,15 +165,43 @@ if fusion_method == 1:
                     tmp_pred3[tmp_pred3 > 0] = 1
                     tmp_pred3[tmp_pred3 <= 0] = 0
 
+                    fusion_thetas = []
+                    if theta1 == -1:
+                        tmp_pred1 = np.ones(tmp_pred1.shape)
+                    else:
+                        fusion_thetas.append(theta1)
+                    if theta2 == -1:
+                        tmp_pred2 = np.ones(tmp_pred2.shape)
+                    else:
+                        fusion_thetas.append(theta2)
+                    if theta1 == -1:
+                        tmp_pred3 = np.ones(tmp_pred3.shape)
+                    else:
+                        fusion_thetas.append(theta3)
+
                     tmp_pred = np.multiply(np.multiply(tmp_pred1, tmp_pred2), tmp_pred3)
 
-                    acc = calculate_acc(tmp_pred, y_test[:, k])
-
-                    if acc > best_acc:
-                        best_acc = acc
-                        y_pred[:, k] = tmp_pred
-                        fusion[k, :] = [theta1, theta2, theta3]
+                    if optimization_metric == "accuracy":
+                        acc = calculate_acc(tmp_pred, y_test[:, k])
+                        if acc > best_acc:
+                            best_acc = acc
+                            y_pred[:, k] = tmp_pred
+                            fusion[k, :] = fusion_thetas
+                    
+                    elif optimization_metric == "f1_score":
+                        f1 = calculate_f1(tmp_pred, y_test[:, k])
+                        if f1 > best_f1:
+                            best_f1 = f1
+                            y_pred[:, k] = tmp_pred
+                            fusion[k, :] = fusion_thetas
                     
         print(fusion[k][0], ", ", fusion[k][1], ", ", fusion[k][2], sep = '')
 
-np.save("fusion_thresholds.npy", fusion)
+# Save fusion thresholds
+save_str = "fusion_thresholds"
+for model_name in version:
+    save_str += "_"
+    save_str += model_name
+save_str += ".npy"
+#np.save("fusion_thresholds.npy", fusion)
+np.save(save_str, fusion)

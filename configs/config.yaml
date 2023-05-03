@@ -29,6 +29,8 @@ aggregation:
 fusion:
   theta_step: 0.05
   method: ""
+  optimization_metric: "accuracy"
+  version: ["mel", "modgd", "pitch"]
 
 paths:
   train_folder: "../../data/raw/IRMAS_Training_Data/"
