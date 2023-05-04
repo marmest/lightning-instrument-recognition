@@ -11,6 +11,11 @@ from sklearn.model_selection import train_test_split
 from collections import OrderedDict
 import torch
 
+#device config
+print(torch.cuda.is_available())
+print(torch.__version__)
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
 # global initialization
 initialize(version_base=None, config_path="../../configs")
 cfg = compose(config_name="config")
@@ -19,6 +24,7 @@ cfg = compose(config_name="config")
 num_classes = cfg.constants.num_classes
 
 # preprocessing
+version = cfg.preprocessing.version
 sample_rate = cfg.preprocessing.sample_rate
 mono = cfg.preprocessing.mono
 step_perc = cfg.preprocessing.step_perc
@@ -204,138 +210,138 @@ def main_testing():
 # main code
 
 if __name__ == "__main__":
+    if "train" in version:
+        print("Training data preprocessing started!")
+        train_data = main_training()
+        print("Training data preprocessing finished!")
 
-    print("Training data preprocessing started!")
-    train_data = main_training()
-    print("Training data preprocessing finished!")
+        print("Spliting train data!")
 
-    print("Spliting train data!")
+        # Convert numpy arrays to PyTorch tensors
+        train_data_tensors = [feat["mels"] for feat in train_data]
+        X_mel = torch.cat(train_data_tensors, dim=0).unsqueeze(3)
 
-    # Convert numpy arrays to PyTorch tensors
-    train_data_tensors = [feat["mels"] for feat in train_data]
-    X_mel = torch.cat(train_data_tensors, dim=0).unsqueeze(3)
+        train_data_tensors = [feat["modgds"] for feat in train_data]
+        X_modgd = torch.cat(train_data_tensors, dim=0).unsqueeze(3)
 
-    train_data_tensors = [feat["modgds"] for feat in train_data]
-    X_modgd = torch.cat(train_data_tensors, dim=0).unsqueeze(3)
+        train_data_tensors = [feat["pitchs"] for feat in train_data]
+        X_pitch = torch.cat(train_data_tensors, dim=0).unsqueeze(3)
 
-    train_data_tensors = [feat["pitchs"] for feat in train_data]
-    X_pitch = torch.cat(train_data_tensors, dim=0).unsqueeze(3)
+        y = torch.cat([torch.tensor(feat["labels"]).repeat(len(feat["mels"]), 1) for feat in train_data])
 
-    y = torch.cat([torch.tensor(feat["labels"]).repeat(len(feat["mels"]), 1) for feat in train_data])
+        # Randomly split training data -> 85% training set, 15% validation set
+        I = torch.arange(y.shape[0])
+        I_train, I_val, _, _ = train_test_split(I, I, test_size=(1 - split_perc), random_state=42)
 
-    # Randomly split training data -> 85% training set, 15% validation set
-    I = torch.arange(y.shape[0])
-    I_train, I_val, _, _ = train_test_split(I, I, test_size=(1 - split_perc), random_state=42)
+        X_train_mel = torch.zeros((int(split_perc * len(I)), list(X_mel.size())[1], list(X_mel.size())[2], list(X_mel.size())[3]))
+        X_val_mel = torch.zeros((len(I) - len(X_train_mel), list(X_mel.size())[1], list(X_mel.size())[2], list(X_mel.size())[3]))
+        X_train_modgd = torch.zeros((int(split_perc * len(I)), list(X_modgd.size())[1], list(X_modgd.size())[2], list(X_modgd.size())[3]))
+        X_val_modgd = torch.zeros((len(I) - len(X_train_modgd), list(X_modgd.size())[1], list(X_modgd.size())[2], list(X_modgd.size())[3]))
+        X_train_pitch = torch.zeros((int(split_perc * len(I)), list(X_pitch.size())[1], list(X_pitch.size())[2], list(X_pitch.size())[3]))
+        X_val_pitch = torch.zeros((len(I) - len(X_train_pitch), list(X_pitch.size())[1], list(X_pitch.size())[2], list(X_pitch.size())[3]))
+        y_train = torch.zeros((int(split_perc * len(I)), num_classes))
+        y_val = torch.zeros((len(I) - len(y_train), num_classes))
 
-    X_train_mel = torch.zeros((int(split_perc * len(I)), list(X_mel.size())[1], list(X_mel.size())[2], list(X_mel.size())[3]))
-    X_val_mel = torch.zeros((len(I) - len(X_train_mel), list(X_mel.size())[1], list(X_mel.size())[2], list(X_mel.size())[3]))
-    X_train_modgd = torch.zeros((int(split_perc * len(I)), list(X_modgd.size())[1], list(X_modgd.size())[2], list(X_modgd.size())[3]))
-    X_val_modgd = torch.zeros((len(I) - len(X_train_modgd), list(X_modgd.size())[1], list(X_modgd.size())[2], list(X_modgd.size())[3]))
-    X_train_pitch = torch.zeros((int(split_perc * len(I)), list(X_pitch.size())[1], list(X_pitch.size())[2], list(X_pitch.size())[3]))
-    X_val_pitch = torch.zeros((len(I) - len(X_train_pitch), list(X_pitch.size())[1], list(X_pitch.size())[2], list(X_pitch.size())[3]))
-    y_train = torch.zeros((int(split_perc * len(I)), num_classes))
-    y_val = torch.zeros((len(I) - len(y_train), num_classes))
+        for i in range(len(I_train)):
+            X_train_mel[i] = X_mel[I_train[i]]
+            X_train_modgd[i] = X_modgd[I_train[i]]
+            X_train_pitch[i] = X_pitch[I_train[i]]
+            y_train[i] = y[I_train[i]]
+            
+        for i in range(len(I_val)):
+            X_val_mel[i] = X_mel[I_val[i]]
+            X_val_modgd[i] = X_modgd[I_val[i]]
+            X_val_pitch[i] = X_pitch[I_val[i]]
+            y_val[i] = y[I_val[i]]
 
-    for i in range(len(I_train)):
-        X_train_mel[i] = X_mel[I_train[i]]
-        X_train_modgd[i] = X_modgd[I_train[i]]
-        X_train_pitch[i] = X_pitch[I_train[i]]
-        y_train[i] = y[I_train[i]]
-        
-    for i in range(len(I_val)):
-        X_val_mel[i] = X_mel[I_val[i]]
-        X_val_modgd[i] = X_modgd[I_val[i]]
-        X_val_pitch[i] = X_pitch[I_val[i]]
-        y_val[i] = y[I_val[i]]
+        print("Finished splitting!")
 
-    print("Finished splitting!")
+        # Save Numpy arrays and dictionaries
+        print("Saving training data!")
 
-    # Save Numpy arrays and dictionaries
-    print("Saving training data!")
+        X_train_mel = X_train_mel.view(X_train_mel.size(0), 1, X_train_mel.size(1), X_train_mel.size(2))
+        X_val_mel = X_val_mel.view(X_val_mel.size(0), 1, X_val_mel.size(1), X_val_mel.size(2))
+        X_train_modgd = X_train_modgd.view(X_train_modgd.size(0), 1, X_train_modgd.size(1), X_train_modgd.size(2))
+        X_val_modgd = X_val_modgd.view(X_val_modgd.size(0), 1, X_val_modgd.size(1), X_val_modgd.size(2))
+        X_train_pitch = X_train_pitch.view(X_train_pitch.size(0), 1, X_train_pitch.size(1), X_train_pitch.size(2))
+        X_val_pitch = X_val_pitch.view(X_val_pitch.size(0), 1, X_val_pitch.size(1), X_val_pitch.size(2))
 
-    X_train_mel = X_train_mel.view(X_train_mel.size(0), 1, X_train_mel.size(1), X_train_mel.size(2))
-    X_val_mel = X_val_mel.view(X_val_mel.size(0), 1, X_val_mel.size(1), X_val_mel.size(2))
-    X_train_modgd = X_train_modgd.view(X_train_modgd.size(0), 1, X_train_modgd.size(1), X_train_modgd.size(2))
-    X_val_modgd = X_val_modgd.view(X_val_modgd.size(0), 1, X_val_modgd.size(1), X_val_modgd.size(2))
-    X_train_pitch = X_train_pitch.view(X_train_pitch.size(0), 1, X_train_pitch.size(1), X_train_pitch.size(2))
-    X_val_pitch = X_val_pitch.view(X_val_pitch.size(0), 1, X_val_pitch.size(1), X_val_pitch.size(2))
+        torch.save(X_train_mel, "../../data/processed/X_train_mel.pt")
+        torch.save(X_val_mel, "../../data/processed/X_val_mel.pt")
+        torch.save(X_train_modgd, "../../data/processed/X_train_modgd.pt")
+        torch.save(X_val_modgd, "../../data/processed/X_val_modgd.pt")
+        torch.save(X_train_pitch, "../../data/processed/X_train_pitch.pt")
+        torch.save(X_val_pitch, "../../data/processed/X_val_pitch.pt")
+        torch.save(y_train, "../../data/processed/y_train.pt")
+        torch.save(y_val, "../../data/processed/y_val.pt")
 
-    torch.save(X_train_mel, "../../data/processed/X_train_mel.pt")
-    torch.save(X_val_mel, "../../data/processed/X_val_mel.pt")
-    torch.save(X_train_modgd, "../../data/processed/X_train_modgd.pt")
-    torch.save(X_val_modgd, "../../data/processed/X_val_modgd.pt")
-    torch.save(X_train_pitch, "../../data/processed/X_train_pitch.pt")
-    torch.save(X_val_pitch, "../../data/processed/X_val_pitch.pt")
-    torch.save(y_train, "../../data/processed/y_train.pt")
-    torch.save(y_val, "../../data/processed/y_val.pt")
+        print("Saved training data!")
+    if "test" in version:
+        print("Testing started!")
+        test_data = main_testing()
+        print("Testing finished!")
 
-    print("Saved training data!")
+        print("Test data!")
 
-    print("Testing started!")
-    test_data = main_testing()
-    print("Testing finished!")
+        # Initialize the testing feature and label dictionaries
+        X_test_mel = OrderedDict()
+        X_test_modgd = OrderedDict()
+        X_test_pitch = OrderedDict()
+        y_test = OrderedDict()
 
-    print("Test data!")
+        # Store the number of audio fragments per testing file
+        num_fragments_per_file = [len(test_data[i]['mels']) for i, _ in enumerate(test_data)]
 
-    # Initialize the testing feature and label dictionaries
-    X_test_mel = OrderedDict()
-    X_test_modgd = OrderedDict()
-    X_test_pitch = OrderedDict()
-    y_test = OrderedDict()
+        # Fill the test data dictionaries
+        for ix, _ in enumerate(test_data):
+            # Initialize the feature and lable matrices for test file at index ix
+            X_test_file_ix_mel = torch.zeros((num_fragments_per_file[ix], list(X_mel.size())[1], list(X_mel.size())[2]))
+            X_test_file_ix_modgd = torch.zeros((num_fragments_per_file[ix], list(X_modgd.size())[1], list(X_modgd.size())[2]))
+            X_test_file_ix_pitch = torch.zeros((num_fragments_per_file[ix], list(X_pitch.size())[1], list(X_pitch.size())[2]))
+            y_test_file_ix = torch.zeros((num_fragments_per_file[ix], num_classes))
 
-    # Store the number of audio fragments per testing file
-    num_fragments_per_file = [len(test_data[i]['mels']) for i, _ in enumerate(test_data)]
+            label = test_data[ix]["labels"]
 
-    # Fill the test data dictionaries
-    for ix, _ in enumerate(test_data):
-        # Initialize the feature and lable matrices for test file at index ix
-        X_test_file_ix_mel = torch.zeros((num_fragments_per_file[ix], list(X_mel.size())[1], list(X_mel.size())[2]))
-        X_test_file_ix_modgd = torch.zeros((num_fragments_per_file[ix], list(X_modgd.size())[1], list(X_modgd.size())[2]))
-        X_test_file_ix_pitch = torch.zeros((num_fragments_per_file[ix], list(X_pitch.size())[1], list(X_pitch.size())[2]))
-        y_test_file_ix = torch.zeros((num_fragments_per_file[ix], num_classes))
+            j = 0
+            for feat in test_data[ix]['mels']:
+                X_test_file_ix_mel[j,:,:] = feat
+                y_test_file_ix[j,:] = label
+                j+=1
+            
+            j = 0
+            for feat in test_data[ix]['modgds']:
+                X_test_file_ix_modgd[j,:,:] = feat
+                j+=1
 
-        label = test_data[ix]["labels"]
+            j = 0
+            for feat in test_data[ix]['pitchs']:
+                X_test_file_ix_pitch[j,:,:] = feat
+                j+=1
 
-        j = 0
-        for feat in test_data[ix]['mels']:
-            X_test_file_ix_mel[j,:,:] = feat
-            y_test_file_ix[j,:] = label
-            j+=1
-        
-        j = 0
-        for feat in test_data[ix]['modgds']:
-            X_test_file_ix_modgd[j,:,:] = feat
-            j+=1
+            X_test_mel[ix] = X_test_file_ix_mel
+            X_test_modgd[ix] = X_test_file_ix_modgd
+            X_test_pitch[ix] = X_test_file_ix_pitch
+            y_test[ix] = y_test_file_ix
 
-        j = 0
-        for feat in test_data[ix]['pitchs']:
-            X_test_file_ix_pitch[j,:,:] = feat
-            j+=1
+        print("Finished test data!")
 
-        X_test_mel[ix] = X_test_file_ix_mel
-        X_test_modgd[ix] = X_test_file_ix_modgd
-        X_test_pitch[ix] = X_test_file_ix_pitch
-        y_test[ix] = y_test_file_ix
+        print("Saving test data!")
 
-    print("Finished test data!")
+        f = open("../../data/processed/X_test_mel.pkl", "wb")
+        pickle.dump(X_test_mel, f)
+        f.close()
 
-    print("Saving test data!")
+        f = open("../../data/processed/X_test_modgd.pkl", "wb")
+        pickle.dump(X_test_modgd, f)
+        f.close()
 
-    f = open("../../data/processed/X_test_mel.pkl", "wb")
-    pickle.dump(X_test_mel, f)
-    f.close()
+        f = open("../../data/processed/X_test_pitch.pkl", "wb")
+        pickle.dump(X_test_pitch, f)
+        f.close()
 
-    f = open("../../data/processed/X_test_modgd.pkl", "wb")
-    pickle.dump(X_test_modgd, f)
-    f.close()
+        f = open("../../data/processed/y_test.pkl", "wb")
+        pickle.dump(y_test, f)
+        f.close()
 
-    f = open("../../data/processed/X_test_pitch.pkl", "wb")
-    pickle.dump(X_test_pitch, f)
-    f.close()
-
-    f = open("../../data/processed/y_test.pkl", "wb")
-    pickle.dump(y_test, f)
-    f.close()
-
-    print("Test data saved!")
+        print("Test data saved!")
 

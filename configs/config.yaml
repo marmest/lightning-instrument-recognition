@@ -2,6 +2,7 @@ constants:
   num_classes: 11
 
 preprocessing:
+  version: ["test"]
   mono: True
   sample_rate: 22050
   step_perc: 1.0
