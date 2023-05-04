@@ -292,12 +292,16 @@ if __name__ == "__main__":
         # Store the number of audio fragments per testing file
         num_fragments_per_file = [len(test_data[i]['mels']) for i, _ in enumerate(test_data)]
 
+        mel_shape = [test_data[0]['mels'][0].size(0), test_data[0]['mels'][0].size(1)]
+        modgd_shape = [test_data[0]['modgds'][0].size(0), test_data[0]['modgds'][0].size(1)]
+        pitch_shape = [test_data[0]['pitchs'][0].size(0), test_data[0]['pitchs'][0].size(1)]
+
         # Fill the test data dictionaries
         for ix, _ in enumerate(test_data):
             # Initialize the feature and lable matrices for test file at index ix
-            X_test_file_ix_mel = torch.zeros((num_fragments_per_file[ix], list(X_mel.size())[1], list(X_mel.size())[2]))
-            X_test_file_ix_modgd = torch.zeros((num_fragments_per_file[ix], list(X_modgd.size())[1], list(X_modgd.size())[2]))
-            X_test_file_ix_pitch = torch.zeros((num_fragments_per_file[ix], list(X_pitch.size())[1], list(X_pitch.size())[2]))
+            X_test_file_ix_mel = torch.zeros((num_fragments_per_file[ix], mel_shape[0], mel_shape[1]))
+            X_test_file_ix_modgd = torch.zeros((num_fragments_per_file[ix], modgd_shape[0], modgd_shape[1]))
+            X_test_file_ix_pitch = torch.zeros((num_fragments_per_file[ix], pitch_shape[0], pitch_shape[1]))
             y_test_file_ix = torch.zeros((num_fragments_per_file[ix], num_classes))
 
             label = test_data[ix]["labels"]
