@@ -148,6 +148,7 @@ if fusion_method == 1:
     if "pitch" not in version:
         thetas_pitch = [-1]
 
+    final_accuracy = 0.0
     for k in range(num_classes):
         best_acc = 0.0
         best_f1 = 0.0
@@ -194,8 +195,12 @@ if fusion_method == 1:
                             best_f1 = f1
                             y_pred[:, k] = tmp_pred
                             fusion[k, :] = fusion_thetas
-                    
+        final_accuracy += best_acc            
         print(fusion[k][0], ", ", fusion[k][1], ", ", fusion[k][2], sep = '')
+
+final_accuracy = final_accuracy / 11.0
+
+print("Final accuracy:", final_accuracy)
 
 # Save fusion thresholds
 save_str = "fusion_thresholds_"
