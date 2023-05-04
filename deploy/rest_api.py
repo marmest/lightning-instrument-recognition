@@ -8,6 +8,7 @@ Created on Thu Apr 27 09:25:06 2023
 from flask import Flask, request, render_template
 import numpy as np
 import torch
+import torch.nn as nn
 import sys
 sys.path.append("../")
 from src.data.data_preprocessing import extract_from_file
@@ -20,10 +21,16 @@ def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1).lower() in ALLOWED_EXTENSIONS
 
 fusion_thresholds = np.load("../src/fusion/fusion_thresholds_mel_modgd_pitch_acc.npy")
+# preprocessing
 step_perc = 1.0 #koliko nam je step kad segmentiramo spektrogram - default 100%
-predictions_map = {0 : "cel", 1 : "cla", 2 : "flu", 3 : "gac", 4 : "gel", 5 : "org",
-             6 : "pia", 7 : "sax", 8 : "tru", 9 : "vio", 10 : "voi"}
-label_map = {"cel": 0, "cla": 1, "flu": 2, "gac": 3, "gel": 4, "org": 5,
+
+# aggregation
+aggregation_method = "s1"
+
+# maps
+predictions_map = {0: "cel", 1: "cla", 2: "flu", 3: "gac", 4: "gel", 5: "org", 
+                   6: "pia", 7: "sax", 8: "tru", 9: "vio", 10: "voi"}
+label_map = {"cel": 0, "cla": 1, "flu": 2, "gac": 3, "gel": 4, "org": 5, 
              "pia": 6, "sax": 7, "tru": 8, "vio": 9, "voi": 10}
 
 model_mel = torch.jit.load('../models/cnn_mel.pt')
@@ -43,10 +50,15 @@ def predict_instrument(audio_grams, type):
         prediction = model_modgd(val)
     else:
         prediction = model_pitch(val)
-    prediction = torch.mean(prediction, axis = 0)
-    #prediction = torch.sum(prediction, axis = 0)
-    #m = torch.max(prediction)
-    #prediction /= m
+    soft = nn.Softmax(dim=1)
+    prediction = soft(prediction)
+
+    if aggregation_method == "s1":
+        prediction = torch.mean(prediction, axis = 0)
+    elif aggregation_method == "s2":
+        prediction = torch.sum(prediction, axis = 0)
+        m = torch.max(prediction)
+        prediction /= m
     prediction = prediction.detach().cpu().numpy()
     return prediction
 
