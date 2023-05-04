@@ -19,7 +19,7 @@ ALLOWED_EXTENSIONS = set(['wav'])
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1).lower() in ALLOWED_EXTENSIONS
 
-fusion_thresholds = np.load("../src/fusion/fusion_thresholds.npy")
+fusion_thresholds = np.load("../src/fusion/fusion_thresholds_mel_modgd_pitch_acc.npy")
 step_perc = 1.0 #koliko nam je step kad segmentiramo spektrogram - default 100%
 predictions_map = {0 : "cel", 1 : "cla", 2 : "flu", 3 : "gac", 4 : "gel", 5 : "org",
              6 : "pia", 7 : "sax", 8 : "tru", 9 : "vio", 10 : "voi"}
