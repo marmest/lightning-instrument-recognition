@@ -53,6 +53,7 @@ fusion_method = cfg.fusion.method
 
 # fusion
 theta_step = cfg.fusion.theta_step
+theta_max = cfg.fusion.theta_max
 version = cfg.fusion.version
 optimization_metric = cfg.fusion.optimization_metric
 
@@ -108,12 +109,16 @@ for i in range(num_models):
     model.eval()
     for (key, val) in X_test[i].items():
 
+        print(i, ":", key, "/", len(X_test[i]))
+
         val = val.to(device)
         
         # Model prediction
         val = val.view(val.size(0), 1, val.size(1), val.size(2))
-        print(val.shape)
+        
         prediction = model(val)
+        soft = nn.Softmax(dim=1)
+        prediction = soft(prediction)
 
         # Aggregation
         if aggregation_method == "s1":
@@ -122,6 +127,7 @@ for i in range(num_models):
             prediction = torch.sum(prediction, axis = 0)
             m = torch.max(prediction)
             prediction /= m
+            
         tmp_probs.append(prediction.detach().cpu().numpy())
         
     tmp_probs = np.array(tmp_probs)
@@ -134,7 +140,11 @@ print("Probabilities computed!")
 y_pred = np.zeros((probabilities.shape[1], probabilities.shape[2]))
 mul_probabilities = np.zeros((probabilities.shape[1], probabilities.shape[2]))
 fusion = np.zeros((num_classes, num_models))
-thetas = np.arange(0, 1.01, theta_step)
+thetas = np.arange(0, theta_max, theta_step)
+
+final_accuracy = 0.0
+
+print("Calculating fusion thresholds!")
 
 if fusion_method == 1:
     
@@ -148,11 +158,11 @@ if fusion_method == 1:
     if "pitch" not in version:
         thetas_pitch = [-1]
 
-    final_accuracy = 0.0
     for k in range(num_classes):
         best_acc = 0.0
         best_f1 = 0.0
         for theta1 in thetas_mel:
+            print(k, theta1)
             for theta2 in thetas_modgd:
                 for theta3 in thetas_pitch:
                     tmp_pred1 = np.array(probabilities[0, :, k]) - theta1
@@ -169,16 +179,14 @@ if fusion_method == 1:
                     fusion_thetas = []
                     if theta1 == -1:
                         tmp_pred1 = np.ones(tmp_pred1.shape)
-                    else:
-                        fusion_thetas.append(theta1)
                     if theta2 == -1:
                         tmp_pred2 = np.ones(tmp_pred2.shape)
-                    else:
-                        fusion_thetas.append(theta2)
-                    if theta1 == -1:
+                    if theta3 == -1:
                         tmp_pred3 = np.ones(tmp_pred3.shape)
-                    else:
-                        fusion_thetas.append(theta3)
+
+                    fusion_thetas.append(theta1)
+                    fusion_thetas.append(theta2)
+                    fusion_thetas.append(theta3)
 
                     tmp_pred = np.multiply(np.multiply(tmp_pred1, tmp_pred2), tmp_pred3)
 

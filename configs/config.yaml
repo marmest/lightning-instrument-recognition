@@ -29,7 +29,8 @@ aggregation:
 
 fusion:
   theta_step: 0.05
-  method: ""
+  theta_max: 1.01
+  method: 1
   optimization_metric: "acc"
   version: ["mel", "modgd", "pitch"]
 
@@ -37,6 +38,10 @@ paths:
   train_folder: "../../data/raw/IRMAS_Training_Data/"
   test_folder: "../../data/raw/IRMAS_Validation_Data/"
   models_folder: "../../models/"
+
+graphs:
+  version: ["mel", "modgd", "pitch"]
+  models_dir: "../models/"
 
 label_map:
   "cel": 0
