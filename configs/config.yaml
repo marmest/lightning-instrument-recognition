@@ -28,7 +28,7 @@ aggregation:
   method: "s1"
 
 fusion:
-  theta_step: 0.05
+  theta_step: 0.025
   theta_max: 1.01
   method: 1
   optimization_metric: "acc"
@@ -55,3 +55,5 @@ label_map:
   "tru": 8
   "vio": 9
   "voi": 10
+
+
