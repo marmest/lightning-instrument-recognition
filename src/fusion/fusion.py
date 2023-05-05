@@ -1,20 +1,21 @@
 import hydra
 from hydra import compose, initialize
-
 import numpy as np
 import torch
 import torch.nn as nn
 import pickle
 import sys
 import os
+from torchmetrics.classification import MultilabelAccuracy, F1Score
+sys.path.append("../")
+from models.lightning_modules import CNN_mel, CNN_modgd, CNN_pitch
+
 
 # global initialization
 initialize(version_base=None, config_path="../../configs")
 cfg = compose(config_name="config")
 
 #device config
-print(torch.cuda.is_available())
-print(torch.__version__)
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 def calculate_acc(y1, y2):
@@ -39,6 +40,7 @@ def calculate_f1(y1, y2):
     return f1
 
 # constants
+lr = cfg.training.learning_rate
 num_classes = cfg.constants.num_classes
 
 # paths
@@ -63,13 +65,22 @@ model_names = []
 for root, dirs, files in os.walk(models_dir):
     files.sort()
     for file in files:
-        if file.endswith('.pt'):
-            model = torch.jit.load(os.path.join(models_dir, file))
-            model = model.to(device)
+        if (file == 'cnn_mel.ckpt'):
+            print('success')
+            model = CNN_mel.load_from_checkpoint(os.path.join(models_dir, file), lr=lr, num_labels=num_classes)
+            model_names.append(file)
+            models.append(model)
+        elif (file == 'cnn_modgd.ckpt'):
+            model = CNN_modgd.load_from_checkpoint(os.path.join(models_dir, file), lr=lr, num_labels=num_classes)
+            model_names.append(file)
+            models.append(model)
+        elif (file == 'cnn_pitch.ckpt'):
+            model = CNN_pitch.load_from_checkpoint(os.path.join(models_dir, file), lr=lr, num_labels=num_classes)
             model_names.append(file)
             models.append(model)
 num_models = len(models)
 print(model_names)
+
 
 print("Load X_test and y_test")
 f = open("../../data/processed/X_test_mel.pkl", "rb")
@@ -110,11 +121,10 @@ for i in range(num_models):
     for (key, val) in X_test[i].items():
 
         print(i, ":", key, "/", len(X_test[i]))
-
-        val = val.to(device)
         
         # Model prediction
         val = val.view(val.size(0), 1, val.size(1), val.size(2))
+        val = val.to(device)
         
         prediction = model(val)
         soft = nn.Softmax(dim=1)
@@ -136,7 +146,7 @@ for i in range(num_models):
 probabilities = np.array(probabilities)
 
 print("Probabilities computed!")
-
+print(probabilities.shape)
 y_pred = np.zeros((probabilities.shape[1], probabilities.shape[2]))
 mul_probabilities = np.zeros((probabilities.shape[1], probabilities.shape[2]))
 fusion = np.zeros((num_classes, num_models))
