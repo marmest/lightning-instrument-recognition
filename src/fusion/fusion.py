@@ -1,11 +1,21 @@
+import hydra
+from hydra import compose, initialize
+
 import numpy as np
+import torch
+import torch.nn as nn
 import pickle
 import sys
 import os
-from keras.models import load_model
-from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import f1_score, precision_recall_fscore_support
-import matplotlib.pyplot as plt
+
+# global initialization
+initialize(version_base=None, config_path="../../configs")
+cfg = compose(config_name="config")
+
+#device config
+print(torch.cuda.is_available())
+print(torch.__version__)
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 def calculate_acc(y1, y2):
     ret = 0
@@ -14,21 +24,51 @@ def calculate_acc(y1, y2):
     ret /= len(y1)
     return ret
 
-models_dir = "../../models/"
+def calculate_f1(y1, y2):
+    tp = 0
+    fp = 0
+    fn = 0
+    for i, _ in enumerate(y1):
+        if y1[i] == 1 and y2[i] == 1:
+            tp += 1
+        elif y1[i] == 1 and y2[i] == 0:
+            fp += 1
+        elif y1[i] == 0 and y2[i] == 1:
+            fn += 1
+    f1 = (2 * tp) / (2 * tp + fp + fn)
+    return f1
 
-label_map = {"cel": 0, "cla": 1, "flu": 2, "gac": 3, "gel": 4, "org": 5,
-             "pia": 6, "sax": 7, "tru": 8, "vio": 9, "voi": 10}
+# constants
+num_classes = cfg.constants.num_classes
+
+# paths
+models_dir = cfg.paths.models_folder
+
+# label map
+label_map = cfg.label_map
+
+# methods
+aggregation_method = cfg.aggregation.method
+fusion_method = cfg.fusion.method
+
+# fusion
+theta_step = cfg.fusion.theta_step
+theta_max = cfg.fusion.theta_max
+version = cfg.fusion.version
+optimization_metric = cfg.fusion.optimization_metric
 
 models = []
 model_names = []
+
 for root, dirs, files in os.walk(models_dir):
     files.sort()
     for file in files:
-        if file.endswith('.h5'):
-            model = load_model(models_dir + "/" + file)
+        if file.endswith('.pt'):
+            model = torch.jit.load(os.path.join(models_dir, file))
+            model = model.to(device)
             model_names.append(file)
             models.append(model)
-n = len(models)
+num_models = len(models)
 print(model_names)
 
 print("Load X_test and y_test")
@@ -54,7 +94,7 @@ f.close()
 X_test = [X_test_mel, X_test_modgd, X_test_pitch]
 
 a = y_test
-y_test = np.zeros((len(a), 11))
+y_test = torch.zeros((len(a), num_classes))
 for i in range(len(a)):
     y_test[i] = a[i][0]
 
@@ -63,24 +103,32 @@ print("Loaded!")
 print("Computing probabilities")
 probabilities = []
 
-for i in range(n):
+for i in range(num_models):
     tmp_probs = []
     model = models[i]
-    print(i)
+    model.eval()
     for (key, val) in X_test[i].items():
-        
-        #print(i, ":", key, "/", len(X_test[i]))
+
+        print(i, ":", key, "/", len(X_test[i]))
+
+        val = val.to(device)
         
         # Model prediction
-        val = np.reshape(val, (val.shape[0], val.shape[1], val.shape[2], 1))
-        prediction = model.predict(val, verbose = 0)
+        val = val.view(val.size(0), 1, val.size(1), val.size(2))
+        
+        prediction = model(val)
+        soft = nn.Softmax(dim=1)
+        prediction = soft(prediction)
 
         # Aggregation
-        prediction = np.mean(prediction, axis = 0)
-        #prediction = np.sum(prediction, axis = 0)
-        #m = np.max(prediction)
-        #prediction /= m
-        tmp_probs.append(prediction)
+        if aggregation_method == "s1":
+            prediction = torch.mean(prediction, axis = 0)
+        elif aggregation_method == "s2":
+            prediction = torch.sum(prediction, axis = 0)
+            m = torch.max(prediction)
+            prediction /= m
+            
+        tmp_probs.append(prediction.detach().cpu().numpy())
         
     tmp_probs = np.array(tmp_probs)
     probabilities.append(tmp_probs)
@@ -91,35 +139,83 @@ print("Probabilities computed!")
 
 y_pred = np.zeros((probabilities.shape[1], probabilities.shape[2]))
 mul_probabilities = np.zeros((probabilities.shape[1], probabilities.shape[2]))
-fusion = np.zeros((11, 3))
-thetas = np.arange(0, 1.01, 0.05)
+fusion = np.zeros((num_classes, num_models))
+thetas = np.arange(0, theta_max, theta_step)
 
-for k in range(mul_probabilities.shape[1]):
-    best_acc = 0.0
-    for theta1 in thetas:
-        for theta2 in thetas:
-            for theta3 in thetas:
-                tmp_pred1 = np.array(probabilities[0, :, k]) - theta1
-                tmp_pred2 = np.array(probabilities[1, :, k]) - theta2
-                tmp_pred3 = np.array(probabilities[2, :, k]) - theta3
+final_accuracy = 0.0
 
-                tmp_pred1[tmp_pred1 > 0] = 1
-                tmp_pred1[tmp_pred1 <= 0] = 0
-                tmp_pred2[tmp_pred2 > 0] = 1
-                tmp_pred2[tmp_pred2 <= 0] = 0
-                tmp_pred3[tmp_pred3 > 0] = 1
-                tmp_pred3[tmp_pred3 <= 0] = 0
+print("Calculating fusion thresholds!")
 
-                tmp_pred = np.multiply(np.multiply(tmp_pred1, tmp_pred2), tmp_pred3)
+if fusion_method == 1:
+    
+    thetas_mel = thetas
+    if "mel" not in version:
+        thetas_mel = [-1]
+    thetas_modgd = thetas
+    if "modgd" not in version:
+        thetas_modgd = [-1]
+    thetas_pitch = thetas
+    if "pitch" not in version:
+        thetas_pitch = [-1]
 
-                acc = calculate_acc(tmp_pred, y_test[:, k])
+    for k in range(num_classes):
+        best_acc = 0.0
+        best_f1 = 0.0
+        for theta1 in thetas_mel:
+            print(k, theta1)
+            for theta2 in thetas_modgd:
+                for theta3 in thetas_pitch:
+                    tmp_pred1 = np.array(probabilities[0, :, k]) - theta1
+                    tmp_pred2 = np.array(probabilities[1, :, k]) - theta2
+                    tmp_pred3 = np.array(probabilities[2, :, k]) - theta3
 
-                if acc > best_acc:
-                    best_acc = acc
-                    y_pred[:, k] = tmp_pred
-                    fusion[k, :] = [theta1, theta2, theta3]
-                
-    print(fusion[k][0], ", ", fusion[k][1], ", ", fusion[k][2], sep = '')
+                    tmp_pred1[tmp_pred1 > 0] = 1
+                    tmp_pred1[tmp_pred1 <= 0] = 0
+                    tmp_pred2[tmp_pred2 > 0] = 1
+                    tmp_pred2[tmp_pred2 <= 0] = 0
+                    tmp_pred3[tmp_pred3 > 0] = 1
+                    tmp_pred3[tmp_pred3 <= 0] = 0
 
+                    fusion_thetas = []
+                    if theta1 == -1:
+                        tmp_pred1 = np.ones(tmp_pred1.shape)
+                    if theta2 == -1:
+                        tmp_pred2 = np.ones(tmp_pred2.shape)
+                    if theta3 == -1:
+                        tmp_pred3 = np.ones(tmp_pred3.shape)
+
+                    fusion_thetas.append(theta1)
+                    fusion_thetas.append(theta2)
+                    fusion_thetas.append(theta3)
+
+                    tmp_pred = np.multiply(np.multiply(tmp_pred1, tmp_pred2), tmp_pred3)
+
+                    if optimization_metric == "acc":
+                        acc = calculate_acc(tmp_pred, y_test[:, k])
+                        if acc > best_acc:
+                            best_acc = acc
+                            y_pred[:, k] = tmp_pred
+                            fusion[k, :] = fusion_thetas
+                    
+                    elif optimization_metric == "f1":
+                        f1 = calculate_f1(tmp_pred, y_test[:, k])
+                        if f1 > best_f1:
+                            best_f1 = f1
+                            y_pred[:, k] = tmp_pred
+                            fusion[k, :] = fusion_thetas
+        final_accuracy += best_acc            
+        print(fusion[k][0], ", ", fusion[k][1], ", ", fusion[k][2], sep = '')
+
+final_accuracy = final_accuracy / 11.0
+
+print("Final accuracy:", final_accuracy)
+
+# Save fusion thresholds
+save_str = "fusion_thresholds_"
+for model_name in version:
+    save_str += model_name
+    save_str += "_"
+save_str += optimization_metric
+save_str += ".npy"
 #np.save("fusion_thresholds.npy", fusion)
-
+np.save(save_str, fusion)
