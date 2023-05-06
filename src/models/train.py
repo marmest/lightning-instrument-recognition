@@ -3,7 +3,6 @@ import torch
 import torch.nn as nn
 from torch.utils.data import TensorDataset, DataLoader
 import lightning.pytorch as L
-from torchmetrics.classification import MultilabelAccuracy
 from lightning.pytorch.callbacks import RichProgressBar, ModelCheckpoint
 from lightning_modules import CNN_mel, CNN_modgd, CNN_pitch
 
@@ -37,7 +36,7 @@ if __name__ == '__main__':
         val_loader = DataLoader(val_dataset, batch_size=batch_size, num_workers=8, shuffle=False)
         
         model = CNN_mel(lr, num_labels)
-        trainer = L.Trainer(callbacks=[RichProgressBar(leave=True), ModelCheckpoint(monitor='val_accuracy', save_top_k=1, dirpath='../../models/', filename='cnn_mel')],
+        trainer = L.Trainer(callbacks=[RichProgressBar(leave=True), ModelCheckpoint(monitor='val_loss', save_top_k=1, dirpath='../../models/', filename='cnn_mel')],
                             max_epochs=epochs, fast_dev_run=False)
         trainer.fit(model, train_loader, val_loader)
 
@@ -54,7 +53,7 @@ if __name__ == '__main__':
         val_loader = DataLoader(val_dataset, batch_size=batch_size, num_workers=8, shuffle=False)
 
         model = CNN_modgd(lr, num_labels)
-        trainer = L.Trainer(callbacks=[RichProgressBar(leave=True), ModelCheckpoint(monitor='val_accuracy', save_top_k=1, dirpath='../../models/', filename='cnn_modgd')],
+        trainer = L.Trainer(callbacks=[RichProgressBar(leave=True), ModelCheckpoint(monitor='val_loss', save_top_k=1, dirpath='../../models/', filename='cnn_modgd')],
                             max_epochs=epochs, fast_dev_run=False)
         trainer.fit(model, train_loader, val_loader)
 
@@ -71,6 +70,6 @@ if __name__ == '__main__':
         val_loader = DataLoader(val_dataset, batch_size=batch_size, num_workers=8, shuffle=False)
 
         model = CNN_pitch(lr, num_labels)
-        trainer = L.Trainer(callbacks=[RichProgressBar(leave=True), ModelCheckpoint(monitor='val_accuracy', save_top_k=1, dirpath='../../models/', filename='cnn_pitch')],
+        trainer = L.Trainer(callbacks=[RichProgressBar(leave=True), ModelCheckpoint(monitor='val_loss', save_top_k=1, dirpath='../../models/', filename='cnn_pitch')],
                             max_epochs=epochs, fast_dev_run=False)
         trainer.fit(model, train_loader, val_loader)
