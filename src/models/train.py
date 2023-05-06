@@ -37,7 +37,7 @@ if __name__ == '__main__':
         
         model = CNN_mel(lr, num_labels)
         trainer = L.Trainer(callbacks=[RichProgressBar(leave=True), ModelCheckpoint(monitor='val_loss', save_top_k=1, dirpath='../../models/', filename='cnn_mel')],
-                            max_epochs=epochs, fast_dev_run=False)
+                            max_epochs=epochs, fast_dev_run=False, precision=16)
         trainer.fit(model, train_loader, val_loader)
 
     if "modgd" in models:
@@ -54,7 +54,7 @@ if __name__ == '__main__':
 
         model = CNN_modgd(lr, num_labels)
         trainer = L.Trainer(callbacks=[RichProgressBar(leave=True), ModelCheckpoint(monitor='val_loss', save_top_k=1, dirpath='../../models/', filename='cnn_modgd')],
-                            max_epochs=epochs, fast_dev_run=False)
+                            max_epochs=epochs, fast_dev_run=False, precision=16)
         trainer.fit(model, train_loader, val_loader)
 
     if "pitch" in models:
@@ -71,5 +71,5 @@ if __name__ == '__main__':
 
         model = CNN_pitch(lr, num_labels)
         trainer = L.Trainer(callbacks=[RichProgressBar(leave=True), ModelCheckpoint(monitor='val_loss', save_top_k=1, dirpath='../../models/', filename='cnn_pitch')],
-                            max_epochs=epochs, fast_dev_run=False)
+                            max_epochs=epochs, fast_dev_run=False, precision=16)
         trainer.fit(model, train_loader, val_loader)
