@@ -7,6 +7,9 @@ from torchmetrics.classification import MultilabelAccuracy
 class CNN_mel(L.LightningModule):
     def __init__(self, lr, num_labels):
         super(CNN_mel, self).__init__()
+        self.train_acc = MultilabelAccuracy(num_labels=num_labels)
+        self.val_acc = MultilabelAccuracy(num_labels=num_labels)
+        self.lr = lr
 
         self.conv1 = nn.Conv2d(1, 8, kernel_size=3, padding=1)
         self.leakyrelu1 = nn.LeakyReLU(negative_slope=0.33)
@@ -41,13 +44,6 @@ class CNN_mel(L.LightningModule):
         self.fc1 = nn.Linear(512, 1024)
         self.dropout5 = nn.Dropout(p=0.5)
         self.fc2 = nn.Linear(1024, 11)
-
-        #metrics
-        self.train_acc = MultilabelAccuracy(num_labels=num_labels)
-        self.val_acc = MultilabelAccuracy(num_labels=num_labels)
-    
-        #hyperparameters
-        self.lr = lr
 
     def forward(self, x):
         x = self.conv1(x)
@@ -90,12 +86,14 @@ class CNN_mel(L.LightningModule):
         outputs = self.forward(inputs)
         criterion = nn.CrossEntropyLoss()
         loss = criterion(outputs, labels)
-        self.train_acc(outputs, labels)
-        self.log_dict({"train_loss": loss,
-                       'train_accuracy': self.train_acc},
-                       on_step=False,
-                       on_epoch=True, prog_bar=True, logger=True)
-        return {'loss': loss, 'log': self.log_dict}
+        self.train_acc.update(outputs, labels)
+        self.log('train_loss', loss, on_step=False, on_epoch=True, prog_bar=True, logger=True)
+        return {'loss': loss, 'log': self.log}
+    
+    def on_train_epoch_end(self):
+        train_accuracy = self.train_acc.compute()
+        self.log("train_accuracy", train_accuracy, on_epoch=True, prog_bar=True, logger=True)
+        self.train_acc.reset()
     
     def configure_optimizers(self):
         optimizer = torch.optim.Adam(self.parameters(), lr=self.lr)
@@ -106,18 +104,22 @@ class CNN_mel(L.LightningModule):
         outputs = self.forward(inputs)
         criterion = nn.CrossEntropyLoss()
         loss = criterion(outputs, labels)
-        self.val_acc(outputs, labels)
-        self.log_dict({"val_loss": loss, 'val_accuracy': self.val_acc},
-                      on_step=False,
-                      on_epoch=True, prog_bar=True, logger=True)
-        return {'val_loss': loss, 'log': self.log_dict}
+        self.val_acc.update(outputs, labels)
+        self.log('val_loss', loss, on_step=False, on_epoch=True, prog_bar=True, logger=True)
+        return {'val_loss': loss, 'log': self.log}
+    
+    def on_validation_epoch_end(self):
+        val_accuracy = self.val_acc.compute()
+        self.log("val_accuracy", val_accuracy, on_epoch=True, prog_bar=True, logger=True)
+        self.val_acc.reset()
     
 
-
-    
 class CNN_modgd(L.LightningModule):
     def __init__(self, lr, num_labels):
         super(CNN_modgd, self).__init__()
+        self.train_acc = MultilabelAccuracy(num_labels=num_labels)
+        self.val_acc = MultilabelAccuracy(num_labels=num_labels)
+        self.lr = lr
 
         self.conv1 = nn.Conv2d(1, 8, kernel_size=3, padding=1)
         self.leakyrelu1 = nn.LeakyReLU(negative_slope=0.33)
@@ -152,13 +154,6 @@ class CNN_modgd(L.LightningModule):
         self.fc1 = nn.Linear(512, 1024)
         self.dropout5 = nn.Dropout(p=0.5)
         self.fc2 = nn.Linear(1024, 11)
-
-        #metrics
-        self.train_acc = MultilabelAccuracy(num_labels=num_labels)
-        self.val_acc = MultilabelAccuracy(num_labels=num_labels)
-
-        #hyperparameters
-        self.lr = lr
 
     def forward(self, x):
         x = self.conv1(x)
@@ -201,12 +196,14 @@ class CNN_modgd(L.LightningModule):
         outputs = self.forward(inputs)
         criterion = nn.CrossEntropyLoss()
         loss = criterion(outputs, labels)
-        self.train_acc(outputs, labels)
-        self.log_dict({"train_loss": loss,
-                       'train_accuracy': self.train_acc},
-                       on_step=False,
-                       on_epoch=True, prog_bar=True, logger=True)
-        return {'loss': loss, 'log': self.log_dict}
+        self.train_acc.update(outputs, labels)
+        self.log('train_loss', loss, on_step=False, on_epoch=True, prog_bar=True, logger=True)
+        return {'loss': loss, 'log': self.log}
+    
+    def on_train_epoch_end(self):
+        train_accuracy = self.train_acc.compute()
+        self.log("train_accuracy", train_accuracy, on_epoch=True, prog_bar=True, logger=True)
+        self.train_acc.reset()
     
     def configure_optimizers(self):
         optimizer = torch.optim.Adam(self.parameters(), lr=self.lr)
@@ -217,15 +214,21 @@ class CNN_modgd(L.LightningModule):
         outputs = self.forward(inputs)
         criterion = nn.CrossEntropyLoss()
         loss = criterion(outputs, labels)
-        self.val_acc(outputs, labels)
-        self.log_dict({"val_loss": loss, 'val_accuracy': self.val_acc},
-                      on_step=False,
-                      on_epoch=True, prog_bar=True, logger=True)
-        return {'val_loss': loss, 'log': self.log_dict}
+        self.val_acc.update(outputs, labels)
+        self.log('val_loss', loss, on_step=False, on_epoch=True, prog_bar=True, logger=True)
+        return {'val_loss': loss, 'log': self.log}
+    
+    def on_validation_epoch_end(self):
+        val_accuracy = self.val_acc.compute()
+        self.log("val_accuracy", val_accuracy, on_epoch=True, prog_bar=True, logger=True)
+        self.val_acc.reset()
     
 class CNN_pitch(L.LightningModule):
     def __init__(self, lr, num_labels):
         super(CNN_pitch, self).__init__()
+        self.train_acc = MultilabelAccuracy(num_labels=num_labels)
+        self.val_acc = MultilabelAccuracy(num_labels=num_labels)
+        self.lr = lr
         
         self.conv1 = nn.Conv2d(1, 24, kernel_size=(3, 3), padding='same')
         self.leakyrelu1 = nn.LeakyReLU(negative_slope=0.33)
@@ -253,13 +256,6 @@ class CNN_pitch(L.LightningModule):
         self.fc1 = nn.Linear(512, 1024)
         self.dropout4 = nn.Dropout(p=0.5)
         self.fc2 = nn.Linear(1024, 11)
-
-        #metrics
-        self.train_acc = MultilabelAccuracy(num_labels=num_labels)
-        self.val_acc = MultilabelAccuracy(num_labels=num_labels)
-
-        #hyperparameters
-        self.lr = lr
         
     def forward(self, x):
         x = self.conv1(x)
@@ -298,12 +294,14 @@ class CNN_pitch(L.LightningModule):
         outputs = self.forward(inputs)
         criterion = nn.CrossEntropyLoss()
         loss = criterion(outputs, labels)
-        self.train_acc(outputs, labels)
-        self.log_dict({"train_loss": loss,
-                       'train_accuracy': self.train_acc},
-                       on_step=False,
-                       on_epoch=True, prog_bar=True, logger=True)
-        return {'loss': loss, 'log': self.log_dict}
+        self.train_acc.update(outputs, labels)
+        self.log('train_loss', loss, on_step=False, on_epoch=True, prog_bar=True, logger=True)
+        return {'loss': loss, 'log': self.log}
+    
+    def on_train_epoch_end(self):
+        train_accuracy = self.train_acc.compute()
+        self.log("train_accuracy", train_accuracy, on_epoch=True, prog_bar=True, logger=True)
+        self.train_acc.reset()
     
     def configure_optimizers(self):
         optimizer = torch.optim.Adam(self.parameters(), lr=self.lr)
@@ -314,8 +312,11 @@ class CNN_pitch(L.LightningModule):
         outputs = self.forward(inputs)
         criterion = nn.CrossEntropyLoss()
         loss = criterion(outputs, labels)
-        self.val_acc(outputs, labels)
-        self.log_dict({"val_loss": loss, 'val_accuracy': self.val_acc},
-                      on_step=False,
-                      on_epoch=True, prog_bar=True, logger=True)
-        return {'val_loss': loss, 'log': self.log_dict}
+        self.val_acc.update(outputs, labels)
+        self.log('val_loss', loss, on_step=False, on_epoch=True, prog_bar=True, logger=True)
+        return {'val_loss': loss, 'log': self.log}
+    
+    def on_validation_epoch_end(self):
+        val_accuracy = self.val_acc.compute()
+        self.log("val_accuracy", val_accuracy, on_epoch=True, prog_bar=True, logger=True)
+        self.val_acc.reset()
