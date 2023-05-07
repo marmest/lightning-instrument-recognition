@@ -133,9 +133,10 @@ class CNN_mel(L.LightningModule):
     def predict_step(self, batch, batch_idx):
         key, val = batch
         val = val.squeeze(dim=0)
+        val = val.view(val.size(0), 1, val.size(1), val.size(2))
         predictions = []
         for i in range(val.size(0)):
-            x = val[0]
+            x = val[i]
             prediction = self.forward(x)
             soft = nn.Softmax(dim=1)
             prediction = soft(prediction)
@@ -268,9 +269,10 @@ class CNN_modgd(L.LightningModule):
     def predict_step(self, batch, batch_idx):
         key, val = batch
         val = val.squeeze(dim=0)
+        val = val.view(val.size(0), 1, val.size(1), val.size(2))
         predictions = []
         for i in range(val.size(0)):
-            x = val[0]
+            x = val[i]
             prediction = self.forward(x)
             soft = nn.Softmax(dim=1)
             prediction = soft(prediction)
@@ -391,9 +393,10 @@ class CNN_pitch(L.LightningModule):
     def predict_step(self, batch, batch_idx):
         key, val = batch
         val = val.squeeze(dim=0)
+        val = val.view(val.size(0), 1, val.size(1), val.size(2))
         predictions = []
         for i in range(val.size(0)):
-            x = val[0]
+            x = val[i]
             prediction = self.forward(x)
             soft = nn.Softmax(dim=1)
             prediction = soft(prediction)
