@@ -55,6 +55,7 @@ fusion_method = cfg.fusion.method
 
 # fusion
 theta_step = cfg.fusion.theta_step
+theta_step_new = cfg.fusion.theta_step_new
 theta_max = cfg.fusion.theta_max
 version = cfg.fusion.version
 optimization_metric = cfg.fusion.optimization_metric
@@ -213,7 +214,62 @@ if fusion_method == 1:
                             best_f1 = f1
                             y_pred[:, k] = tmp_pred
                             fusion[k, :] = fusion_thetas
-        final_accuracy += best_acc            
+
+        thetas_mel_new = np.arange(fusion[k][0] - 0.05, fusion[k][0] + 0.05, theta_step_new)
+        if "mel" not in version:
+            thetas_mel_new = [-1]
+        thetas_modgd_new = np.arange(fusion[k][1] - 0.05, fusion[k][1] + 0.05, theta_step_new)
+        if "modgd" not in version:
+            thetas_modgd_new = [-1]
+        thetas_pitch_new = np.arange(fusion[k][2] - 0.05, fusion[k][2] + 0.05, theta_step_new)
+        if "pitch" not in version:
+            thetas_pitch_new = [-1]
+
+        for theta1 in thetas_mel_new:
+            print(k, theta1)
+            for theta2 in thetas_modgd_new:
+                for theta3 in thetas_pitch_new:
+                    tmp_pred1 = np.array(probabilities[0, :, k]) - theta1
+                    tmp_pred2 = np.array(probabilities[1, :, k]) - theta2
+                    tmp_pred3 = np.array(probabilities[2, :, k]) - theta3
+
+                    tmp_pred1[tmp_pred1 > 0] = 1
+                    tmp_pred1[tmp_pred1 <= 0] = 0
+                    tmp_pred2[tmp_pred2 > 0] = 1
+                    tmp_pred2[tmp_pred2 <= 0] = 0
+                    tmp_pred3[tmp_pred3 > 0] = 1
+                    tmp_pred3[tmp_pred3 <= 0] = 0
+
+                    fusion_thetas = []
+                    if theta1 == -1:
+                        tmp_pred1 = np.ones(tmp_pred1.shape)
+                    if theta2 == -1:
+                        tmp_pred2 = np.ones(tmp_pred2.shape)
+                    if theta3 == -1:
+                        tmp_pred3 = np.ones(tmp_pred3.shape)
+
+                    fusion_thetas.append(theta1)
+                    fusion_thetas.append(theta2)
+                    fusion_thetas.append(theta3)
+
+                    tmp_pred = np.multiply(np.multiply(tmp_pred1, tmp_pred2), tmp_pred3)
+
+                    if optimization_metric == "acc":
+                        acc = calculate_acc(tmp_pred, y_test[:, k])
+                        if acc > best_acc:
+                            best_acc = acc
+                            y_pred[:, k] = tmp_pred
+                            fusion[k, :] = fusion_thetas
+                    
+                    elif optimization_metric == "f1":
+                        f1 = calculate_f1(tmp_pred, y_test[:, k])
+                        if f1 > best_f1:
+                            best_f1 = f1
+                            y_pred[:, k] = tmp_pred
+                            fusion[k, :] = fusion_thetas
+
+        final_accuracy += best_acc
+
         print(fusion[k][0], ", ", fusion[k][1], ", ", fusion[k][2], sep = '')
 
 final_accuracy = final_accuracy / 11.0
