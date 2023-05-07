@@ -28,11 +28,12 @@ aggregation:
   method: "s1"
 
 fusion:
-  theta_step: 0.025
+  theta_step: 0.01
+  theta_step_new: 0.001
   theta_max: 1.01
   method: 1
-  optimization_metric: "acc"
-  version: ["mel", "modgd", "pitch"]
+  optimization_metric: "f1"
+  version: ["mel"]
 
 paths:
   train_folder: "../../data/raw/IRMAS_Training_Data/"
