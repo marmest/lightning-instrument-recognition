@@ -32,7 +32,7 @@ fusion:
   theta_step_new: 0.001
   theta_max: 1.01
   method: 1
-  optimization_metric: "f1"
+  optimization_metric: "acc"
   version: ["mel"]
 
 paths:
