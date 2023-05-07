@@ -124,7 +124,6 @@ for i in range(num_models):
         print(i, ":", key, "/", len(X_test[i]))
         
         # Model prediction
-        val = val.view(val.size(0), 1, val.size(1), val.size(2))
         val = val.to(device)
         
         prediction = model(val)
