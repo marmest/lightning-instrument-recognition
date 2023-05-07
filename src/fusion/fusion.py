@@ -3,12 +3,14 @@ from hydra import compose, initialize
 import numpy as np
 import torch
 import torch.nn as nn
+from torch.utils.data import DataLoader
+import lightning.pytorch as L
 import pickle
 import sys
 import os
 from torchmetrics.classification import MultilabelAccuracy, F1Score
 sys.path.append("../")
-from models.lightning_modules import CNN_mel, CNN_modgd, CNN_pitch
+from models.lightning_modules import CNN_mel, CNN_modgd, CNN_pitch, ListDataset
 
 
 # global initialization
@@ -116,9 +118,19 @@ print("Computing probabilities")
 probabilities = []
 
 for i in range(num_models):
-    tmp_probs = []
+    keys = list(X_test[i].keys())
+    vals = list(X_test[i].values())
+    dataset = ListDataset(keys, vals)
+    predict_loader = DataLoader(dataset, batch_size=1, num_workers=8, shuffle=False)
+
     model = models[i]
-    model.eval()
+    trainer = L.Trainer()
+    trainer.predict(model, dataloaders=predict_loader)
+
+    model_predictions = model.model_predictions
+    model_predictions = torch.stack(model_predictions)
+    probabilities.append(model_predictions)
+    '''
     for (key, val) in X_test[i].items():
 
         print(i, ":", key, "/", len(X_test[i]))
@@ -142,8 +154,9 @@ for i in range(num_models):
         
     tmp_probs = np.array(tmp_probs)
     probabilities.append(tmp_probs)
-
-probabilities = np.array(probabilities)
+    '''
+probabilities = torch.stack(probabilities)
+probabilities = probabilities.detach().cpu().numpy()
 
 print("Probabilities computed!")
 print(probabilities.shape)
