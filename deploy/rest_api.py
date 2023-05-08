@@ -8,6 +8,7 @@ Created on Thu Apr 27 09:25:06 2023
 from flask import Flask, request, render_template
 import hydra
 from hydra import compose, initialize
+
 import numpy as np
 import torch
 import torch.nn as nn
@@ -30,7 +31,7 @@ num_classes = cfg.constants.num_classes
 
 ALLOWED_EXTENSIONS = set(['wav'])
 def allowed_file(filename):
-    return '.' in filename and filename.rsplit('.', 1).lower() in ALLOWED_EXTENSIONS
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 fusion_thresholds = np.load("../src/fusion/fusion_thresholds_mel_modgd_pitch_acc.npy")
 # preprocessing
@@ -83,18 +84,27 @@ def render():
 def predict():
     # TO-DO: dodati slučaj kada file nije ispravne ekstenzije i kada uopće nije uploadan file
     audio_file = request.files['audiofile']
-    audio_grams = extract_from_file(audio_file, api = True)
 
-    prediction_mels = predict_instrument(audio_grams['mels'], 'mels')
-    prediction_modgds = predict_instrument(audio_grams['modgds'], 'modgds')
-    prediction_pitchs = predict_instrument(audio_grams['pitchs'], 'pitchs')
+    if audio_file is None or audio_file.filename == "":
+        return jsonify({'error': 'no file'})
+    if not allowed_file(audio_file.filename):
+        return jsonify({'error': 'format not supported'})
+    
+    try:
+        audio_grams = extract_from_file(audio_file, api = True)
 
-    final_instruments = []
-    for i in range(11):
-        if prediction_mels[i] > fusion_thresholds[i][0] and prediction_modgds[i] > fusion_thresholds[i][1] and prediction_pitchs[i] > fusion_thresholds[i][2]:
-            final_instruments.append(predictions_map[i])
+        prediction_mels = predict_instrument(audio_grams['mels'], 'mels')
+        prediction_modgds = predict_instrument(audio_grams['modgds'], 'modgds')
+        prediction_pitchs = predict_instrument(audio_grams['pitchs'], 'pitchs')
 
+        final_instruments = []
+        for i in range(11):
+            if prediction_mels[i] > fusion_thresholds[i][0] and prediction_modgds[i] > fusion_thresholds[i][1] and prediction_pitchs[i] > fusion_thresholds[i][2]:
+                final_instruments.append(predictions_map[i])
 
+    except:
+        return jsonify({'error': 'error during prediction'})
+    
     return render_template('index.html', predictions = final_instruments)
 
 @app.route('/predict_test', methods=['POST'])
@@ -103,22 +113,31 @@ def predict_test():
     
     audio_file = request.files['audiofile']
 
+    if audio_file is None or audio_file.filename == "":
+        return jsonify({'error': 'no file'})
+    if not allowed_file(audio_file.filename):
+        return jsonify({'error': 'format not supported'})
+
     audio_grams = extract_from_file(audio_file, api = True)
 
-    prediction_mels = predict_instrument(audio_grams['mels'], 'mels')
-    prediction_modgds = predict_instrument(audio_grams['modgds'], 'modgds')
-    prediction_pitchs = predict_instrument(audio_grams['pitchs'], 'pitchs')
+    try:
+        prediction_mels = predict_instrument(audio_grams['mels'], 'mels')
+        prediction_modgds = predict_instrument(audio_grams['modgds'], 'modgds')
+        prediction_pitchs = predict_instrument(audio_grams['pitchs'], 'pitchs')
 
-    dict = {}
-    i = 0
-    for key in label_map.keys():
-        if prediction_mels[i] > fusion_thresholds[i][0] and prediction_modgds[i] > fusion_thresholds[i][1] and prediction_pitchs[i] > fusion_thresholds[i][2]:
-            dict[key] = 1
-        else:
-            dict[key] = 0
-        i = i + 1
-            
-    return dict
+        dict = {}
+        i = 0
+        for key in label_map.keys():
+            if prediction_mels[i] > fusion_thresholds[i][0] and prediction_modgds[i] > fusion_thresholds[i][1] and prediction_pitchs[i] > fusion_thresholds[i][2]:
+                dict[key] = 1
+            else:
+                dict[key] = 0
+            i = i + 1
+                
+        return dict
+    
+    except:
+        return jsonify({'error': 'error during prediction'})
 
 if __name__ == '__main__':
     app.run(port=5050, debug=True)
