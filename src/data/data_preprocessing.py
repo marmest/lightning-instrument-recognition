@@ -299,27 +299,27 @@ if __name__ == "__main__":
         # Fill the test data dictionaries
         for ix, _ in enumerate(test_data):
             # Initialize the feature and lable matrices for test file at index ix
-            X_test_file_ix_mel = torch.zeros((num_fragments_per_file[ix], mel_shape[0], mel_shape[1]))
-            X_test_file_ix_modgd = torch.zeros((num_fragments_per_file[ix], modgd_shape[0], modgd_shape[1]))
-            X_test_file_ix_pitch = torch.zeros((num_fragments_per_file[ix], pitch_shape[0], pitch_shape[1]))
-            y_test_file_ix = torch.zeros((num_fragments_per_file[ix], num_classes))
+            X_test_file_ix_mel = torch.zeros((num_fragments_per_file[ix], 1 ,mel_shape[0], mel_shape[1]))
+            X_test_file_ix_modgd = torch.zeros((num_fragments_per_file[ix], 1 ,modgd_shape[0], modgd_shape[1]))
+            X_test_file_ix_pitch = torch.zeros((num_fragments_per_file[ix], 1 ,pitch_shape[0], pitch_shape[1]))
+            y_test_file_ix = torch.zeros((num_fragments_per_file[ix], 1 ,num_classes))
 
             label = test_data[ix]["labels"]
 
             j = 0
             for feat in test_data[ix]['mels']:
-                X_test_file_ix_mel[j,:,:] = feat
+                X_test_file_ix_mel[j,:,:,:] = feat
                 y_test_file_ix[j,:] = label
                 j+=1
             
             j = 0
             for feat in test_data[ix]['modgds']:
-                X_test_file_ix_modgd[j,:,:] = feat
+                X_test_file_ix_modgd[j,:,:,:] = feat
                 j+=1
 
             j = 0
             for feat in test_data[ix]['pitchs']:
-                X_test_file_ix_pitch[j,:,:] = feat
+                X_test_file_ix_pitch[j,:,:,:] = feat
                 j+=1
 
             X_test_mel[ix] = X_test_file_ix_mel

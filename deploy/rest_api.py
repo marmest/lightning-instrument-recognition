@@ -5,16 +5,29 @@ Created on Thu Apr 27 09:25:06 2023
 @author: Francek
 """
 
-from flask import Flask, request, render_template, jsonify
+from flask import Flask, request, render_template
+import hydra
+from hydra import compose, initialize
+
 import numpy as np
 import torch
 import torch.nn as nn
 import sys
 sys.path.append("../")
 from src.data.data_preprocessing import extract_from_file
+from src.models.lightning_modules import CNN_mel, CNN_modgd, CNN_pitch
 
 #device config
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
+# global initialization
+hydra.core.global_hydra.GlobalHydra.instance().clear()
+initialize(version_base=None, config_path="../configs")
+cfg = compose(config_name="config")
+
+#hyper parameters
+lr = cfg.training.learning_rate
+num_classes = cfg.constants.num_classes
 
 ALLOWED_EXTENSIONS = set(['wav'])
 def allowed_file(filename):
@@ -33,12 +46,9 @@ predictions_map = {0: "cel", 1: "cla", 2: "flu", 3: "gac", 4: "gel", 5: "org",
 label_map = {"cel": 0, "cla": 1, "flu": 2, "gac": 3, "gel": 4, "org": 5, 
              "pia": 6, "sax": 7, "tru": 8, "vio": 9, "voi": 10}
 
-model_mel = torch.jit.load('../models/cnn_mel.pt')
-model_mel = model_mel.to(device)
-model_modgd = torch.jit.load('../models/cnn_modgd.pt')
-model_modgd = model_modgd.to(device)
-model_pitch = torch.jit.load('../models/cnn_pitch.pt')
-model_pitch = model_pitch.to(device)
+model_mel = CNN_mel.load_from_checkpoint('../models/cnn_mel.ckpt', lr=lr, num_labels=num_classes)
+model_modgd = CNN_modgd.load_from_checkpoint('../models/cnn_modgd.ckpt', lr=lr, num_labels=num_classes)
+model_pitch = CNN_pitch.load_from_checkpoint('../models/cnn_pitch.ckpt', lr=lr, num_labels=num_classes)
 
 def predict_instrument(audio_grams, type):
     val = audio_grams.to(device)
