@@ -12,7 +12,7 @@ files = [file[:-4] for file in os.listdir(test_folder) if file.endswith('.wav')]
 
 # Sort the files based on the numerical value of N
 sorted_files = sorted(files, key=lambda x: int(x.split('_')[1]))
-i = 0
+
 file_dict = {}
 for file in os.listdir(test_folder):
     file_path = os.path.join(test_folder, file)
@@ -22,8 +22,6 @@ for file in os.listdir(test_folder):
         filename = os.path.basename(file_path)
         response = requests.post(BASE, files = {"audiofile" : audio_file})    
         file_dict[filename[:-4]] = response.json()
-        i = i + 1
-        print(i)
 
 with open("solution.json", "w") as f:
     json.dump(file_dict, f, indent=4, separators=(", ", ": "))

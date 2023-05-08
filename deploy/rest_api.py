@@ -41,14 +41,14 @@ step_perc = 1.0 #koliko nam je step kad segmentiramo spektrogram - default 100%
 aggregation_method = "s1"
 
 # maps
-predictions_map = {0: "cel", 1: "cla", 2: "flu", 3: "gac", 4: "gel", 5: "org", 
-                   6: "pia", 7: "sax", 8: "tru", 9: "vio", 10: "voi"}
+predictions_map = {0: "cello", 1: "clarinet", 2: "flute", 3: "accoustic guitar", 4: "electric guitar", 5: "organ", 
+                   6: "piano", 7: "saxophone", 8: "trumpet", 9: "violin", 10: "voice"}
 label_map = {"cel": 0, "cla": 1, "flu": 2, "gac": 3, "gel": 4, "org": 5, 
              "pia": 6, "sax": 7, "tru": 8, "vio": 9, "voi": 10}
 
-model_mel = CNN_mel.load_from_checkpoint('../models/cnn_mel.ckpt', lr=lr, num_labels=num_classes)
-model_modgd = CNN_modgd.load_from_checkpoint('../models/cnn_modgd.ckpt', lr=lr, num_labels=num_classes)
-model_pitch = CNN_pitch.load_from_checkpoint('../models/cnn_pitch.ckpt', lr=lr, num_labels=num_classes)
+model_mel = CNN_mel.load_from_checkpoint('../models/cnn_mel.ckpt', lr=lr, num_labels=num_classes, map_location=device)
+model_modgd = CNN_modgd.load_from_checkpoint('../models/cnn_modgd.ckpt', lr=lr, num_labels=num_classes, map_location=device)
+model_pitch = CNN_pitch.load_from_checkpoint('../models/cnn_pitch.ckpt', lr=lr, num_labels=num_classes, map_location=device)
 
 def predict_instrument(audio_grams, type):
     val = audio_grams.to(device)
@@ -82,7 +82,6 @@ def render():
 
 @app.route('/', methods=['POST'])
 def predict():
-    # TO-DO: dodati slučaj kada file nije ispravne ekstenzije i kada uopće nije uploadan file
     audio_file = request.files['audiofile']
 
     if audio_file is None or audio_file.filename == "":
@@ -108,9 +107,7 @@ def predict():
     return render_template('index.html', predictions = final_instruments)
 
 @app.route('/predict_test', methods=['POST'])
-def predict_test():
-    # TO-DO: dodati slučaj kada file nije ispravne ekstenzije i kada uopće nije uploadan file
-    
+def predict_test():    
     audio_file = request.files['audiofile']
 
     if audio_file is None or audio_file.filename == "":
@@ -140,4 +137,4 @@ def predict_test():
         return jsonify({'error': 'error during prediction'})
 
 if __name__ == '__main__':
-    app.run(port=5050, debug=True)
+    app.run(host='0.0.0.0', port=5050, debug=True)
