@@ -1,4 +1,4 @@
-# pytorch-instrument-classifier-api
+# lightning-instrument-recognition
 Instrument recognition with IRMAS dataset using Pytorch Lightning framework.\
 To run the web app, follow these steps:
 * Navigate to the project folder pytorch-instrument-classifier-api.
