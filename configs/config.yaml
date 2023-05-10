@@ -1,12 +1,12 @@
 constants:
-  num_classes: 11
+  num_classes: 11 # default 11 instruments
 
 preprocessing:
-  version: ["test"]
-  mono: True
-  sample_rate: 22050
-  step_perc: 1.0
-  seconds: 1
+  version: ["test"] # for which datasets we do data preprocessing - default ["train", "test"]
+  mono: True # mono Channel
+  sample_rate: 22050 
+  step_perc: 1.0 # step in aggregation
+  seconds: 1 # window length in feature extraction
   n_fft_mel: 255
   hop_length_mel: 220
   n_frequency_bins_modgd: 128
@@ -18,22 +18,22 @@ preprocessing:
   hop_length_pitch: 220
 
 training:
-  models: ["mel", "modgd", "pitch"]
-  split_perc: 0.85
+  models: ["mel", "modgd", "pitch"] # which models we train when we start train.py
+  split_perc: 0.85 # train - validation split
   epochs: 30
   batch_size: 128
   learning_rate: 0.001
 
 aggregation:
-  method: "s1"
+  method: "s1" # s1 - mean, s2 - sum and normalize
 
 fusion:
-  theta_step: 0.01
-  theta_step_new: 0.001
-  theta_max: 1.01
-  method: 1
-  optimization_metric: "acc"
-  version: ["mel"]
+  theta_step: 0.05
+  theta_step_new: 0.01 # theta steps when we calculate fusion thresholds
+  theta_max: 0.601
+  method: 1 # fusion method
+  optimization_metric: "f1" # we optimize thresholds by this metric - "acc" or "f1"
+  version: ["mel", "modgd", "pitch"] # models we use for fusion
 
 paths:
   train_folder: "../../data/raw/IRMAS_Training_Data/"

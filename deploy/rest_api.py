@@ -5,7 +5,7 @@ Created on Thu Apr 27 09:25:06 2023
 @author: Francek
 """
 
-from flask import Flask, request, render_template
+from flask import Flask, request, render_template, jsonify
 import hydra
 from hydra import compose, initialize
 
@@ -20,22 +20,24 @@ from src.models.lightning_modules import CNN_mel, CNN_modgd, CNN_pitch
 #device config
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-# global initialization
+# global hydra initialization
 hydra.core.global_hydra.GlobalHydra.instance().clear()
 initialize(version_base=None, config_path="../configs")
 cfg = compose(config_name="config")
 
-#hyper parameters
+# hyper parameters
 lr = cfg.training.learning_rate
 num_classes = cfg.constants.num_classes
+label_map = cfg.label_map
 
 ALLOWED_EXTENSIONS = set(['wav'])
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 fusion_thresholds = np.load("../src/fusion/fusion_thresholds_mel_modgd_pitch_acc.npy")
+
 # preprocessing
-step_perc = 1.0 #koliko nam je step kad segmentiramo spektrogram - default 100%
+step_perc = 1.0 # the step when we segment the spectrogram - default 100%
 
 # aggregation
 aggregation_method = "s1"
@@ -43,8 +45,7 @@ aggregation_method = "s1"
 # maps
 predictions_map = {0: "cello", 1: "clarinet", 2: "flute", 3: "accoustic guitar", 4: "electric guitar", 5: "organ", 
                    6: "piano", 7: "saxophone", 8: "trumpet", 9: "violin", 10: "voice"}
-label_map = {"cel": 0, "cla": 1, "flu": 2, "gac": 3, "gel": 4, "org": 5, 
-             "pia": 6, "sax": 7, "tru": 8, "vio": 9, "voi": 10}
+
 
 model_mel = CNN_mel.load_from_checkpoint('../models/cnn_mel.ckpt', lr=lr, num_labels=num_classes, map_location=device)
 model_modgd = CNN_modgd.load_from_checkpoint('../models/cnn_modgd.ckpt', lr=lr, num_labels=num_classes, map_location=device)
@@ -69,6 +70,7 @@ def predict_instrument(audio_grams, type):
         prediction = torch.sum(prediction, axis = 0)
         m = torch.max(prediction)
         prediction /= m
+        
     prediction = prediction.detach().cpu().numpy()
     return prediction
 
@@ -85,9 +87,11 @@ def predict():
     audio_file = request.files['audiofile']
 
     if audio_file is None or audio_file.filename == "":
-        return jsonify({'error': 'no file'})
+        error = 'You have to choose a file to make a prediction.'
+        return render_template('index.html', err_empty = error)
     if not allowed_file(audio_file.filename):
-        return jsonify({'error': 'format not supported'})
+        error = 'This file format is not supported. Please choose a .wav file.'
+        return render_template('index.html', err_wav = error)
     
     try:
         audio_grams = extract_from_file(audio_file, api = True)
@@ -102,7 +106,8 @@ def predict():
                 final_instruments.append(predictions_map[i])
 
     except:
-        return jsonify({'error': 'error during prediction'})
+        error = 'There was an error while predicting, please try again in a few minutes.'
+        return render_template('index.html', err_pred = error)
     
     return render_template('index.html', predictions = final_instruments)
 
@@ -112,8 +117,6 @@ def predict_test():
 
     if audio_file is None or audio_file.filename == "":
         return jsonify({'error': 'no file'})
-    if not allowed_file(audio_file.filename):
-        return jsonify({'error': 'format not supported'})
 
     audio_grams = extract_from_file(audio_file, api = True)
 
